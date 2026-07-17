@@ -1,0 +1,29 @@
+# Normalize text files in the repository.
+* text=auto
+
+# Code, configuration, and documentation use Unix line endings.
+*.py text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.csv text eol=lf
+
+# Windows scripts use Windows line endings.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files must never be line-ending normalized.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.zip binary
+*.joblib binary
+*.pkl binary
+*.parquet binary
+*.faiss binary
+*.npy binary
