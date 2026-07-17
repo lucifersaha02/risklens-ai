@@ -14,6 +14,7 @@ from risklens.modeling.baseline import train_baselines
 from risklens.modeling.calibration import calibrate_candidate
 from risklens.modeling.candidate import train_xgboost_candidate
 from risklens.modeling.decision import define_decision_policy
+from risklens.modeling.full_history import train_full_history_candidate
 
 app = typer.Typer(
     name="risklens",
@@ -199,6 +200,37 @@ def build_history_features() -> None:
     for table, coverage in report["table_coverage"].items():
         typer.echo(f"{table} applicant coverage: {coverage:.2%}")
     typer.echo("No target values were used or stored in the feature store.")
+
+
+@app.command("train-full-history")
+def train_full_history() -> None:
+    """Cross-validate and compare the full-history XGBoost candidate."""
+    ensure_output_directories()
+    typer.echo("Cross-validating the full-history XGBoost candidate...")
+    report = train_full_history_candidate()
+    cv_metrics = report["cross_validation"]
+    validation = report["validation"]
+    comparison = report["comparison"]
+    typer.echo(
+        f"CV ROC-AUC: {cv_metrics['roc_auc']['mean']:.4f} +/- "
+        f"{cv_metrics['roc_auc']['standard_deviation']:.4f}"
+    )
+    typer.echo(
+        f"CV PR-AUC: {cv_metrics['average_precision']['mean']:.4f} +/- "
+        f"{cv_metrics['average_precision']['standard_deviation']:.4f}"
+    )
+    typer.echo(
+        f"Validation: ROC-AUC {validation['roc_auc']:.4f}, "
+        f"PR-AUC {validation['average_precision']:.4f}, "
+        f"Brier {validation['brier_score']:.4f}"
+    )
+    pr_delta = comparison["average_precision"]["delta_full_history_minus_application"]
+    typer.echo(f"PR-AUC change vs application-only: {pr_delta:+.4f}")
+    typer.secho(
+        f"Selected candidate: {comparison['selected_candidate']}",
+        fg=typer.colors.GREEN,
+    )
+    typer.echo("Calibration and holdout splits were not accessed.")
 
 
 if __name__ == "__main__":
