@@ -1,0 +1,94 @@
+dataset:
+  name: Home Credit Default Risk
+  source: https://www.kaggle.com/competitions/home-credit-default-risk/data
+  version: kaggle-competition-download
+  primary_key: SK_ID_CURR
+  target: TARGET
+
+expected_files:
+  application_train.csv:
+    minimum_rows: 300000
+    required_columns:
+      - SK_ID_CURR
+      - TARGET
+      - AMT_INCOME_TOTAL
+      - AMT_CREDIT
+      - AMT_ANNUITY
+      - DAYS_BIRTH
+      - DAYS_EMPLOYED
+
+  application_test.csv:
+    minimum_rows: 48000
+    required_columns:
+      - SK_ID_CURR
+      - AMT_INCOME_TOTAL
+      - AMT_CREDIT
+      - AMT_ANNUITY
+      - DAYS_BIRTH
+      - DAYS_EMPLOYED
+
+  bureau.csv:
+    minimum_rows: 1700000
+    required_columns:
+      - SK_ID_CURR
+      - SK_ID_BUREAU
+      - CREDIT_ACTIVE
+      - DAYS_CREDIT
+
+  bureau_balance.csv:
+    minimum_rows: 27000000
+    required_columns:
+      - SK_ID_BUREAU
+      - MONTHS_BALANCE
+      - STATUS
+
+  previous_application.csv:
+    minimum_rows: 1600000
+    required_columns:
+      - SK_ID_CURR
+      - SK_ID_PREV
+      - NAME_CONTRACT_STATUS
+
+  installments_payments.csv:
+    minimum_rows: 13000000
+    required_columns:
+      - SK_ID_CURR
+      - SK_ID_PREV
+      - AMT_INSTALMENT
+      - AMT_PAYMENT
+
+  credit_card_balance.csv:
+    minimum_rows: 3800000
+    required_columns:
+      - SK_ID_CURR
+      - SK_ID_PREV
+      - AMT_BALANCE
+
+  POS_CASH_balance.csv:
+    minimum_rows: 10000000
+    required_columns:
+      - SK_ID_CURR
+      - SK_ID_PREV
+      - MONTHS_BALANCE
+
+  HomeCredit_columns_description.csv:
+    minimum_rows: 200
+    required_columns:
+      - Table
+      - Row
+      - Description
+
+  sample_submission.csv:
+    minimum_rows: 48000
+    required_columns:
+      - SK_ID_CURR
+      - TARGET
+
+validation:
+  allowed_target_values:
+    - 0
+    - 1
+  maximum_duplicate_primary_keys: 0
+  expected_positive_rate:
+    minimum: 0.07
+    maximum: 0.09
