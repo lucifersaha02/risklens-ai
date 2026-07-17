@@ -34,3 +34,11 @@ xgboost:
   min_child_weight: 20
   reg_lambda: 2.0
   tree_method: hist
+
+calibration:
+  methods:
+    - sigmoid
+    - isotonic
+  selection_fraction: 0.50
+  primary_metric: brier_score
+  secondary_metric: log_loss

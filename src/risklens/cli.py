@@ -9,6 +9,7 @@ from risklens.data.audit import run_data_audit
 from risklens.data.splitting import create_and_save_splits
 from risklens.data.validation import DataValidationError, validate_raw_dataset
 from risklens.modeling.baseline import train_baselines
+from risklens.modeling.calibration import calibrate_candidate
 from risklens.modeling.candidate import train_xgboost_candidate
 
 app = typer.Typer(
@@ -126,6 +127,25 @@ def train_candidate_model() -> None:
             fg=typer.colors.GREEN,
         )
     typer.echo("Calibration and holdout splits were not accessed.")
+
+
+@app.command("calibrate-model")
+def calibrate_model() -> None:
+    """Select and fit probability calibration without accessing holdout."""
+    ensure_output_directories()
+    typer.echo("Comparing probability calibration methods...")
+    report = calibrate_candidate()
+    for method, metrics in report["selection_metrics"].items():
+        typer.echo(
+            f"{method}: Brier {metrics['brier_score']:.5f}, "
+            f"log loss {metrics['log_loss']:.5f}, "
+            f"ROC-AUC {metrics['roc_auc']:.4f}"
+        )
+    typer.secho(
+        f"Selected calibration method: {report['selected_method']}",
+        fg=typer.colors.GREEN,
+    )
+    typer.echo("Final holdout was not accessed.")
 
 
 if __name__ == "__main__":
