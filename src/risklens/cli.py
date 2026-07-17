@@ -15,6 +15,9 @@ from risklens.modeling.calibration import calibrate_candidate
 from risklens.modeling.candidate import train_xgboost_candidate
 from risklens.modeling.decision import define_decision_policy
 from risklens.modeling.full_history import train_full_history_candidate
+from risklens.modeling.full_history_calibration import (
+    calibrate_full_history_candidate,
+)
 
 app = typer.Typer(
     name="risklens",
@@ -231,6 +234,25 @@ def train_full_history() -> None:
         fg=typer.colors.GREEN,
     )
     typer.echo("Calibration and holdout splits were not accessed.")
+
+
+@app.command("calibrate-full-history")
+def calibrate_full_history() -> None:
+    """Calibrate the selected full-history model without accessing holdout."""
+    ensure_output_directories()
+    typer.echo("Comparing full-history probability calibration methods...")
+    report = calibrate_full_history_candidate()
+    for method, metrics in report["selection_metrics"].items():
+        typer.echo(
+            f"{method}: Brier {metrics['brier_score']:.5f}, "
+            f"log loss {metrics['log_loss']:.5f}, "
+            f"ROC-AUC {metrics['roc_auc']:.4f}"
+        )
+    typer.secho(
+        f"Selected calibration method: {report['selected_method']}",
+        fg=typer.colors.GREEN,
+    )
+    typer.echo("Final holdout was not accessed.")
 
 
 if __name__ == "__main__":
