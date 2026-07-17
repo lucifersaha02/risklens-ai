@@ -8,6 +8,7 @@ from risklens.config import METRICS_DIR, ensure_output_directories
 from risklens.data.audit import run_data_audit
 from risklens.data.splitting import create_and_save_splits
 from risklens.data.validation import DataValidationError, validate_raw_dataset
+from risklens.modeling.baseline import train_baselines
 
 app = typer.Typer(
     name="risklens",
@@ -79,6 +80,22 @@ def create_splits() -> None:
     for name, values in summary["splits"].items():
         typer.echo(f"{name}: {values['rows']:,} rows, positive rate {values['positive_rate']:.2%}")
     typer.echo("The holdout split is reserved for final evaluation only.")
+
+
+@app.command("train-baselines")
+def train_baseline_models() -> None:
+    """Train and validate application-only dummy and logistic benchmarks."""
+    ensure_output_directories()
+    typer.echo("Training application-only benchmark models...")
+    report = train_baselines()
+    for name, metrics in report["models"].items():
+        typer.echo(
+            f"{name}: ROC-AUC {metrics['roc_auc']:.4f}, "
+            f"PR-AUC {metrics['average_precision']:.4f}, "
+            f"Brier {metrics['brier_score']:.4f}"
+        )
+    typer.secho("Baseline training completed.", fg=typer.colors.GREEN)
+    typer.echo("Calibration and holdout splits were not accessed.")
 
 
 if __name__ == "__main__":

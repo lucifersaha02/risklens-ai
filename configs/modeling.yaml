@@ -13,3 +13,10 @@ identifiers:
 policy:
   holdout_usage: final_evaluation_only
   stratify: true
+
+baseline:
+  logistic_regression:
+    regularization_c: 1.0
+    maximum_iterations: 1000
+    solver: lbfgs
+  decision_threshold: 0.50
