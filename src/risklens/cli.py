@@ -11,6 +11,7 @@ from risklens.data.validation import DataValidationError, validate_raw_dataset
 from risklens.modeling.baseline import train_baselines
 from risklens.modeling.calibration import calibrate_candidate
 from risklens.modeling.candidate import train_xgboost_candidate
+from risklens.modeling.decision import define_decision_policy
 
 app = typer.Typer(
     name="risklens",
@@ -146,6 +147,26 @@ def calibrate_model() -> None:
         fg=typer.colors.GREEN,
     )
     typer.echo("Final holdout was not accessed.")
+
+
+@app.command("define-policy")
+def define_policy() -> None:
+    """Lock the cost-derived decision threshold and report sensitivity."""
+    ensure_output_directories()
+    typer.echo("Defining the cost-sensitive decision policy...")
+    report = define_decision_policy()
+    metrics = report["locked_threshold_metrics"]
+    typer.secho(
+        f"Locked decision threshold: {report['locked_threshold']:.4f}",
+        fg=typer.colors.GREEN,
+    )
+    typer.echo(
+        f"Validation recall {metrics['recall']:.2%}, "
+        f"precision {metrics['precision']:.2%}, "
+        f"approval rate {metrics['approval_rate']:.2%}"
+    )
+    typer.echo(f"Expected validation cost: {metrics['cost_per_application']:.4f} units/application")
+    typer.echo("Threshold was derived from documented costs; holdout was not accessed.")
 
 
 if __name__ == "__main__":

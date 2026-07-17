@@ -42,3 +42,12 @@ calibration:
   selection_fraction: 0.50
   primary_metric: brier_score
   secondary_metric: log_loss
+
+decision_policy:
+  false_negative_cost: 5.0
+  false_positive_cost: 1.0
+  threshold_grid:
+    minimum: 0.01
+    maximum: 0.50
+    step: 0.005
+  selection_rule: theoretical_cost_threshold
