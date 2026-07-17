@@ -9,6 +9,7 @@ from risklens.data.audit import run_data_audit
 from risklens.data.splitting import create_and_save_splits
 from risklens.data.validation import DataValidationError, validate_raw_dataset
 from risklens.fairness.evaluation import evaluate_responsible_ai
+from risklens.features.history import build_history_feature_store
 from risklens.modeling.baseline import train_baselines
 from risklens.modeling.calibration import calibrate_candidate
 from risklens.modeling.candidate import train_xgboost_candidate
@@ -185,6 +186,19 @@ def evaluate_fairness() -> None:
         )
     typer.secho("Responsible-AI diagnostic completed.", fg=typer.colors.GREEN)
     typer.echo("This diagnostic is not proof of fairness; holdout was not accessed.")
+
+
+@app.command("build-history-features")
+def build_history_features() -> None:
+    """Build target-free, chunked relational history aggregates."""
+    ensure_output_directories()
+    typer.echo("Building the full-history feature store in memory-safe chunks...")
+    report = build_history_feature_store()
+    typer.secho("Full-history feature store completed.", fg=typer.colors.GREEN)
+    typer.echo(f"Rows: {report['rows']:,}; history features: {report['feature_columns']:,}")
+    for table, coverage in report["table_coverage"].items():
+        typer.echo(f"{table} applicant coverage: {coverage:.2%}")
+    typer.echo("No target values were used or stored in the feature store.")
 
 
 if __name__ == "__main__":

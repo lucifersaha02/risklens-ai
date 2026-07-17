@@ -70,3 +70,7 @@ responsible_ai:
     - 40_to_49
     - 50_to_59
     - 60_plus
+
+feature_store:
+  chunk_size: 500000
+  output_file: full_history_features.parquet
