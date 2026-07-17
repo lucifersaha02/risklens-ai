@@ -20,3 +20,17 @@ baseline:
     maximum_iterations: 1000
     solver: lbfgs
   decision_threshold: 0.50
+
+cross_validation:
+  folds: 3
+  primary_metric: average_precision
+
+xgboost:
+  n_estimators: 400
+  max_depth: 4
+  learning_rate: 0.03
+  subsample: 0.85
+  colsample_bytree: 0.85
+  min_child_weight: 20
+  reg_lambda: 2.0
+  tree_method: hist

@@ -9,6 +9,7 @@ from risklens.data.audit import run_data_audit
 from risklens.data.splitting import create_and_save_splits
 from risklens.data.validation import DataValidationError, validate_raw_dataset
 from risklens.modeling.baseline import train_baselines
+from risklens.modeling.candidate import train_xgboost_candidate
 
 app = typer.Typer(
     name="risklens",
@@ -95,6 +96,35 @@ def train_baseline_models() -> None:
             f"Brier {metrics['brier_score']:.4f}"
         )
     typer.secho("Baseline training completed.", fg=typer.colors.GREEN)
+    typer.echo("Calibration and holdout splits were not accessed.")
+
+
+@app.command("train-candidate")
+def train_candidate_model() -> None:
+    """Cross-validate and evaluate the application-only XGBoost candidate."""
+    ensure_output_directories()
+    typer.echo("Cross-validating the XGBoost candidate on training data...")
+    report = train_xgboost_candidate()
+    cv_metrics = report["cross_validation"]
+    validation = report["validation"]
+    typer.echo(
+        f"CV ROC-AUC: {cv_metrics['roc_auc']['mean']:.4f} "
+        f"+/- {cv_metrics['roc_auc']['standard_deviation']:.4f}"
+    )
+    typer.echo(
+        f"CV PR-AUC: {cv_metrics['average_precision']['mean']:.4f} "
+        f"+/- {cv_metrics['average_precision']['standard_deviation']:.4f}"
+    )
+    typer.echo(
+        f"Validation: ROC-AUC {validation['roc_auc']:.4f}, "
+        f"PR-AUC {validation['average_precision']:.4f}, "
+        f"Brier {validation['brier_score']:.4f}"
+    )
+    if "comparison" in report:
+        typer.secho(
+            f"Selected candidate: {report['comparison']['selected_model']}",
+            fg=typer.colors.GREEN,
+        )
     typer.echo("Calibration and holdout splits were not accessed.")
 
 
