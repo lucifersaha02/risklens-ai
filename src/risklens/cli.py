@@ -8,6 +8,7 @@ from risklens.config import METRICS_DIR, ensure_output_directories
 from risklens.data.audit import run_data_audit
 from risklens.data.splitting import create_and_save_splits
 from risklens.data.validation import DataValidationError, validate_raw_dataset
+from risklens.fairness.evaluation import evaluate_responsible_ai
 from risklens.modeling.baseline import train_baselines
 from risklens.modeling.calibration import calibrate_candidate
 from risklens.modeling.candidate import train_xgboost_candidate
@@ -167,6 +168,23 @@ def define_policy() -> None:
     )
     typer.echo(f"Expected validation cost: {metrics['cost_per_application']:.4f} units/application")
     typer.echo("Threshold was derived from documented costs; holdout was not accessed.")
+
+
+@app.command("evaluate-fairness")
+def evaluate_fairness() -> None:
+    """Run validation-only responsible-AI subgroup diagnostics."""
+    ensure_output_directories()
+    typer.echo("Evaluating validation subgroup behavior...")
+    report = evaluate_responsible_ai()
+    for group, diagnostic in report["diagnostics"].items():
+        gaps = diagnostic["gaps"]
+        typer.echo(
+            f"{group}: {diagnostic['eligible_groups']} eligible groups, "
+            f"recall gap {gaps['recall_max_min_gap']:.2%}, "
+            f"FPR gap {gaps['false_positive_rate_max_min_gap']:.2%}"
+        )
+    typer.secho("Responsible-AI diagnostic completed.", fg=typer.colors.GREEN)
+    typer.echo("This diagnostic is not proof of fairness; holdout was not accessed.")
 
 
 if __name__ == "__main__":
