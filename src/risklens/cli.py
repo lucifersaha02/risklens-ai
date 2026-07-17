@@ -5,6 +5,7 @@ import json
 import typer
 
 from risklens.config import METRICS_DIR, ensure_output_directories
+from risklens.data.audit import run_data_audit
 from risklens.data.validation import DataValidationError, validate_raw_dataset
 
 app = typer.Typer(
@@ -50,11 +51,21 @@ def validate_data() -> None:
         f"Validation passed: {report['files_checked']} files checked.",
         fg=typer.colors.GREEN,
     )
-    typer.echo(
-        f"Positive target rate: "
-        f"{report['target_validation']['positive_rate']:.2%}"
-    )
+    typer.echo(f"Positive target rate: {report['target_validation']['positive_rate']:.2%}")
     typer.echo(f"Report saved to: {report_path}")
+
+
+@app.command("audit-data")
+def audit_data() -> None:
+    """Audit application quality and relational-table coverage."""
+    ensure_output_directories()
+    typer.echo("Auditing application data and relational coverage...")
+    report = run_data_audit()
+    summary = report["application_summary"]
+    typer.secho("Data audit completed.", fg=typer.colors.GREEN)
+    typer.echo(f"Applications: {summary['rows']:,}")
+    typer.echo(f"Positive target rate: {summary['positive_rate']:.2%}")
+    typer.echo("Reports saved under reports/ and reports/metrics/.")
 
 
 if __name__ == "__main__":

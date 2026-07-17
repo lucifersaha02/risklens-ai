@@ -46,9 +46,7 @@ def read_csv_header(path: Path) -> list[str]:
                 f"Could not read the header of {path.name}: {error}"
             ) from error
     except Exception as error:
-        raise DataValidationError(
-            f"Could not read the header of {path.name}: {error}"
-        ) from error
+        raise DataValidationError(f"Could not read the header of {path.name}: {error}") from error
 
 
 def count_csv_rows(
@@ -65,20 +63,14 @@ def count_csv_rows(
                 newline_count += chunk.count(b"\n")
                 last_byte = chunk[-1:]
     except OSError as error:
-        raise DataValidationError(
-            f"Could not read {path.name}: {error}"
-        ) from error
+        raise DataValidationError(f"Could not read {path.name}: {error}") from error
 
     if newline_count == 0:
         return 0
 
     # A file ending with a newline has one line per newline.
     # Otherwise, its final record must be counted separately.
-    total_lines = (
-        newline_count
-        if last_byte == b"\n"
-        else newline_count + 1
-    )
+    total_lines = newline_count if last_byte == b"\n" else newline_count + 1
 
     # Exclude the CSV header.
     return max(total_lines - 1, 0)
@@ -97,16 +89,13 @@ def validate_file(
     missing_columns = sorted(set(required_columns) - set(header))
 
     if missing_columns:
-        raise DataValidationError(
-            f"{path.name} is missing required columns: {missing_columns}"
-        )
+        raise DataValidationError(f"{path.name} is missing required columns: {missing_columns}")
 
     row_count = count_csv_rows(path)
 
     if row_count < minimum_rows:
         raise DataValidationError(
-            f"{path.name} contains {row_count:,} rows; "
-            f"expected at least {minimum_rows:,}"
+            f"{path.name} contains {row_count:,} rows; expected at least {minimum_rows:,}"
         )
 
     return {

@@ -49,8 +49,7 @@ def test_read_csv_header_falls_back_to_cp1252(tmp_path: Path) -> None:
     """Read source files containing Windows cp1252 characters."""
     csv_path = tmp_path / "windows_encoded.csv"
     csv_path.write_text(
-        "Table,Row,Description\n"
-        "application_train,AMT_CREDIT,Credit…amount\n",
+        "Table,Row,Description\napplication_train,AMT_CREDIT,Credit…amount\n",
         encoding="cp1252",
     )
 
