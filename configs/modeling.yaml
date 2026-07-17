@@ -1,0 +1,15 @@
+random_seed: 42
+
+splits:
+  train: 0.70
+  validation: 0.10
+  calibration: 0.10
+  holdout: 0.10
+
+identifiers:
+  primary_key: SK_ID_CURR
+  target: TARGET
+
+policy:
+  holdout_usage: final_evaluation_only
+  stratify: true
