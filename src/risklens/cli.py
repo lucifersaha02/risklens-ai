@@ -25,6 +25,7 @@ from risklens.modeling.full_history_calibration import (
 from risklens.modeling.full_history_decision import (
     define_full_history_decision_policy,
 )
+from risklens.serving.inference import FrozenRiskScorer
 
 app = typer.Typer(
     name="risklens",
@@ -364,6 +365,17 @@ def evaluate_holdout(
         f"approval rate {policy['approval_rate']:.2%}"
     )
     typer.echo("Model development is now closed; post-holdout tuning is prohibited.")
+
+
+@app.command("score-applicant")
+def score_applicant(
+    applicant_id: int = typer.Argument(..., min=1),
+    reasons: int = typer.Option(5, "--reasons", min=1, max=20),
+) -> None:
+    """Score one applicant with the frozen governed model."""
+    scorer = FrozenRiskScorer()
+    response = scorer.score_applicant(applicant_id, reason_count=reasons)
+    typer.echo(response.model_dump_json(indent=2))
 
 
 if __name__ == "__main__":
