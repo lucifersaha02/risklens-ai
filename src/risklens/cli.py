@@ -27,6 +27,12 @@ from risklens.modeling.full_history_decision import (
     define_full_history_decision_policy,
 )
 from risklens.monitoring.drift import build_monitoring_baseline, monitor_test_population
+from risklens.rag.knowledge_base import (
+    build_knowledge_index,
+    evaluate_knowledge_retrieval,
+    load_knowledge_index,
+    load_rag_config,
+)
 from risklens.serving.inference import FrozenRiskScorer
 
 app = typer.Typer(
@@ -443,6 +449,52 @@ def monitor_unlabeled_test_population() -> None:
     )
     typer.echo("Labels are unavailable, so performance drift was not measured.")
     typer.echo("Monitoring alerts do not authorize post-holdout model tuning.")
+
+
+@app.command("build-knowledge-index")
+def build_rag_knowledge_index() -> None:
+    """Build the trusted local project-document knowledge index."""
+    typer.echo("Building injection-scanned local knowledge index...")
+    manifest = build_knowledge_index()
+    typer.secho("Knowledge index completed.", fg=typer.colors.GREEN)
+    typer.echo(
+        f"Sources: {manifest['source_count']}; chunks: {manifest['chunk_count']}; "
+        f"backend: {manifest['backend']}"
+    )
+    typer.echo("Applicant-specific queries are prohibited.")
+
+
+@app.command("query-knowledge")
+def query_knowledge(
+    question: str = typer.Argument(...),
+    top_k: int | None = typer.Option(None, "--top-k", min=1, max=20),
+) -> None:
+    """Retrieve cited project documentation without generating a decision."""
+    config = load_rag_config()
+    requested_top_k = top_k or int(config["index"]["default_top_k"])
+    results = load_knowledge_index().search(
+        question,
+        top_k=requested_top_k,
+        minimum_score=float(config["index"]["minimum_score"]),
+    )
+    if not results:
+        typer.echo("No sufficiently relevant documentation was found.")
+        raise typer.Exit(code=1)
+    for rank, result in enumerate(results, start=1):
+        typer.echo(f"{rank}. {result['citation']} score={result['score']:.4f}")
+        typer.echo(f"   {result['text'][:400]}")
+
+
+@app.command("evaluate-knowledge-retrieval")
+def evaluate_rag_retrieval() -> None:
+    """Evaluate citation-source retrieval on curated governance questions."""
+    typer.echo("Evaluating local knowledge retrieval...")
+    report = evaluate_knowledge_retrieval()
+    typer.secho("Retrieval evaluation completed.", fg=typer.colors.GREEN)
+    typer.echo(
+        f"Hit rate@{report['top_k']}: {report['source_hit_rate_at_k']:.2%}; "
+        f"MRR: {report['mean_reciprocal_rank']:.4f}"
+    )
 
 
 if __name__ == "__main__":

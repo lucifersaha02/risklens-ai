@@ -1,0 +1,25 @@
+index:
+  backend: tfidf_word_bigram
+  chunk_words: 180
+  chunk_overlap_words: 30
+  default_top_k: 5
+  minimum_score: 0.02
+
+trusted_sources:
+  - README.md
+  - data/README.md
+  - reports/data_audit.md
+  - reports/model_card.md
+  - reports/final_holdout_report.md
+  - reports/full_history_responsible_ai_report.md
+  - reports/shap_explainability_report.md
+  - reports/monitoring_report.md
+
+security:
+  reject_prompt_injection_patterns: true
+  reject_applicant_specific_queries: true
+  retrieved_text_is_untrusted_data: true
+
+limitations: >-
+  Retrieval supports project documentation and analyst education only. It does not
+  score applicants, make lending decisions, establish causality, or provide legal advice.

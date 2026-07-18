@@ -1,0 +1,13 @@
+queries:
+  - question: What is the locked decision threshold and how was it selected?
+    expected_source: reports/model_card.md
+  - question: Which sensitive attributes are excluded from automated risk scoring?
+    expected_source: reports/model_card.md
+  - question: What ROC-AUC was observed in the one-time final holdout evaluation?
+    expected_source: reports/final_holdout_report.md
+  - question: Which feature triggered the critical drift alert?
+    expected_source: reports/monitoring_report.md
+  - question: What output space do the SHAP values explain?
+    expected_source: reports/shap_explainability_report.md
+  - question: Is the raw Home Credit competition data included in the repository?
+    expected_source: README.md
