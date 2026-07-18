@@ -18,6 +18,9 @@ from risklens.modeling.full_history import train_full_history_candidate
 from risklens.modeling.full_history_calibration import (
     calibrate_full_history_candidate,
 )
+from risklens.modeling.full_history_decision import (
+    define_full_history_decision_policy,
+)
 
 app = typer.Typer(
     name="risklens",
@@ -253,6 +256,27 @@ def calibrate_full_history() -> None:
         fg=typer.colors.GREEN,
     )
     typer.echo("Final holdout was not accessed.")
+
+
+@app.command("define-full-history-policy")
+def define_full_history_policy() -> None:
+    """Define the cost-sensitive policy for the calibrated full-history model."""
+    ensure_output_directories()
+    typer.echo("Defining the full-history cost-sensitive decision policy...")
+    report = define_full_history_decision_policy()
+    metrics = report["locked_threshold_metrics"]
+    typer.secho(
+        f"Locked decision threshold: {report['locked_threshold']:.4f}",
+        fg=typer.colors.GREEN,
+    )
+    typer.echo(
+        f"Validation recall {metrics['recall']:.2%}, "
+        f"precision {metrics['precision']:.2%}, "
+        f"approval rate {metrics['approval_rate']:.2%}"
+    )
+    typer.echo(f"Expected validation cost: {metrics['cost_per_application']:.4f} units/application")
+    typer.echo("Costs are hypothetical portfolio assumptions, not lender estimates.")
+    typer.echo("The final holdout was not accessed.")
 
 
 if __name__ == "__main__":
