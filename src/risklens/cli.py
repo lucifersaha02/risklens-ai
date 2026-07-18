@@ -12,6 +12,7 @@ from risklens.explainability.shap_analysis import build_full_history_shap_explan
 from risklens.fairness.evaluation import evaluate_responsible_ai
 from risklens.fairness.full_history import evaluate_full_history_responsible_ai
 from risklens.features.history import build_history_feature_store
+from risklens.governance.holdout import evaluate_final_holdout
 from risklens.governance.model_card import build_model_card
 from risklens.modeling.baseline import train_baselines
 from risklens.modeling.calibration import calibrate_candidate
@@ -329,6 +330,40 @@ def create_model_card() -> None:
     typer.echo(f"Governance policy: {freeze['governance_policy']}")
     typer.echo("Candidate, calibrated-model, and configuration hashes recorded.")
     typer.echo("The final holdout remains sealed.")
+
+
+@app.command("evaluate-final-holdout")
+def evaluate_holdout(
+    confirm: bool = typer.Option(
+        False,
+        "--confirm",
+        help="Confirm irreversible one-time access to the frozen final holdout.",
+    ),
+) -> None:
+    """Evaluate the frozen model on final holdout exactly once."""
+    if not confirm:
+        typer.secho(
+            "Holdout access blocked. Re-run with --confirm after reviewing the freeze.",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=2)
+    ensure_output_directories()
+    typer.echo("Verifying frozen artifacts before one-time holdout access...")
+    report = evaluate_final_holdout()
+    metrics = report["probability_metrics"]
+    policy = report["locked_policy_metrics"]
+    typer.secho(
+        "Final holdout evaluation completed and permanently recorded.", fg=typer.colors.GREEN
+    )
+    typer.echo(
+        f"ROC-AUC {metrics['roc_auc']:.4f}, PR-AUC {metrics['average_precision']:.4f}, "
+        f"Brier {metrics['brier_score']:.4f}"
+    )
+    typer.echo(
+        f"Locked-policy recall {policy['recall']:.2%}, precision {policy['precision']:.2%}, "
+        f"approval rate {policy['approval_rate']:.2%}"
+    )
+    typer.echo("Model development is now closed; post-holdout tuning is prohibited.")
 
 
 if __name__ == "__main__":
