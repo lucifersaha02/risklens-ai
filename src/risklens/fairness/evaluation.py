@@ -97,11 +97,14 @@ def disparity_summary(table: pd.DataFrame) -> dict[str, Any]:
 
 
 def write_fairness_report(
-    tables: dict[str, pd.DataFrame], report: dict[str, Any], path: Path
+    tables: dict[str, pd.DataFrame],
+    report: dict[str, Any],
+    path: Path,
+    title: str = "RiskLens AI Responsible-AI Diagnostic",
 ) -> None:
     """Write a human-readable responsible-AI diagnostic report."""
     lines = [
-        "# RiskLens AI Responsible-AI Diagnostic",
+        f"# {title}",
         "",
         f"Decision threshold: `{report['decision_threshold']:.4f}`",
         "",

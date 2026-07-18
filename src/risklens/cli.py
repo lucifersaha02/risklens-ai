@@ -9,6 +9,7 @@ from risklens.data.audit import run_data_audit
 from risklens.data.splitting import create_and_save_splits
 from risklens.data.validation import DataValidationError, validate_raw_dataset
 from risklens.fairness.evaluation import evaluate_responsible_ai
+from risklens.fairness.full_history import evaluate_full_history_responsible_ai
 from risklens.features.history import build_history_feature_store
 from risklens.modeling.baseline import train_baselines
 from risklens.modeling.calibration import calibrate_candidate
@@ -276,6 +277,24 @@ def define_full_history_policy() -> None:
     )
     typer.echo(f"Expected validation cost: {metrics['cost_per_application']:.4f} units/application")
     typer.echo("Costs are hypothetical portfolio assumptions, not lender estimates.")
+    typer.echo("The final holdout was not accessed.")
+
+
+@app.command("evaluate-full-history-fairness")
+def evaluate_full_history_fairness() -> None:
+    """Run validation subgroup diagnostics for the full-history model."""
+    ensure_output_directories()
+    typer.echo("Evaluating full-history validation subgroup behavior...")
+    report = evaluate_full_history_responsible_ai()
+    for group, diagnostic in report["diagnostics"].items():
+        gaps = diagnostic["gaps"]
+        typer.echo(
+            f"{group}: {diagnostic['eligible_groups']} eligible groups, "
+            f"recall gap {gaps['recall_max_min_gap']:.2%}, "
+            f"FPR gap {gaps['false_positive_rate_max_min_gap']:.2%}"
+        )
+    typer.secho("Full-history responsible-AI diagnostic completed.", fg=typer.colors.GREEN)
+    typer.echo("This diagnostic is not proof of fairness or legal compliance.")
     typer.echo("The final holdout was not accessed.")
 
 
