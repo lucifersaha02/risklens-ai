@@ -1,5 +1,5 @@
 {
-  "release_status": "pre_holdout_frozen_research_prototype",
+  "release_status": "final_holdout_evaluated_research_prototype",
   "model": "full_history_xgboost_calibrated",
   "locked_threshold": 0.166667,
   "calibration_method": "sigmoid",
@@ -24,6 +24,7 @@
       "sha256": "2c7d08aee5f737cc4d11ba8e7671d7bbc1deb6cab0e88dbc2466e1d413b32c92"
     }
   },
-  "holdout_accessed": false,
-  "post_holdout_tuning_permitted": false
+  "holdout_accessed": true,
+  "post_holdout_tuning_permitted": false,
+  "holdout_accessed_at_utc": "2026-07-18T06:32:57+00:00"
 }
