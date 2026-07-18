@@ -18,8 +18,11 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 
 from risklens.config import METRICS_DIR, REPORT_DIR
+from risklens.rag.assistant import AssistantResponse, answer_governance_question
 from risklens.serving.inference import ApplicantNotFoundError, FrozenRiskScorer
 from risklens.serving.schemas import (
+    EvidenceAssistantRequest,
+    EvidenceAssistantResponse,
     ModelInfoResponse,
     MonitoringSummaryResponse,
     PortfolioSummaryResponse,
@@ -105,6 +108,11 @@ def get_monitoring_summary() -> MonitoringSummaryResponse:
     if not path.exists():
         raise FileNotFoundError("Run `risklens monitor-test-population` first")
     return MonitoringSummaryResponse.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+def get_evidence_assistant() -> Callable[[str], AssistantResponse]:
+    """Return the guarded assistant function as an overridable API dependency."""
+    return answer_governance_question
 
 
 def require_api_key(
@@ -250,6 +258,22 @@ def monitoring_summary(
 ) -> MonitoringSummaryResponse:
     """Return the latest drift and data-quality monitoring snapshot."""
     return summary
+
+
+@app.post(
+    "/evidence-assistant/query",
+    response_model=EvidenceAssistantResponse,
+    responses={422: {"model": ErrorResponse}},
+    dependencies=[Depends(require_api_key)],
+    tags=["knowledge"],
+)
+def query_evidence_assistant(
+    request: EvidenceAssistantRequest,
+    assistant: Annotated[Callable[[str], AssistantResponse], Depends(get_evidence_assistant)],
+) -> EvidenceAssistantResponse:
+    """Return cited project evidence while prohibiting individual credit advice."""
+    response = assistant(request.question)
+    return EvidenceAssistantResponse.model_validate(response.as_dict())
 
 
 @app.get(

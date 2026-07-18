@@ -236,6 +236,37 @@ def render_monitoring(client: RiskLensAPIClient) -> None:
     st.caption(summary.interpretation)
 
 
+def render_evidence_assistant(client: RiskLensAPIClient) -> None:
+    """Render the guarded project-document evidence assistant."""
+    st.subheader("Governance evidence assistant")
+    st.caption(
+        "Ask about model performance, policy, fairness diagnostics, explanations, or drift. "
+        "Individual lending recommendations are prohibited."
+    )
+    question = st.text_area(
+        "Question",
+        value="What were the final holdout results and what limitations apply?",
+        max_chars=1000,
+    )
+    if st.button("Retrieve cited evidence", type="primary", width="stretch"):
+        try:
+            response = client.ask_evidence_assistant(question)
+        except RiskLensAPIError as error:
+            st.error(str(error))
+            return
+        st.info(response.summary)
+        if not response.evidence:
+            st.warning("No sufficiently relevant trusted documentation was found.")
+        for rank, passage in enumerate(response.evidence, start=1):
+            with st.expander(f"{rank}. {passage.citation}", expanded=rank == 1):
+                st.write(passage.excerpt)
+                st.caption(f"Retrieval relevance: {passage.relevance_score:.4f}")
+        st.markdown("**Required disclosures**")
+        for disclosure in response.disclosures:
+            st.markdown(f"- {disclosure}")
+        st.warning("Human review is required. This is not an autonomous credit decision.")
+
+
 st.title("RiskLens AI")
 st.caption("Explainable Credit Risk Intelligence Platform")
 with st.sidebar:
@@ -260,13 +291,15 @@ except RiskLensAPIError as error:
     st.error(str(error))
     st.stop()
 
-applicant_tab, portfolio_tab, monitoring_tab, governance_tab = st.tabs(
-    ["Applicant", "Portfolio evidence", "Monitoring", "Governance"]
+applicant_tab, portfolio_tab, assistant_tab, monitoring_tab, governance_tab = st.tabs(
+    ["Applicant", "Portfolio evidence", "Evidence assistant", "Monitoring", "Governance"]
 )
 with applicant_tab:
     render_applicant(api_client)
 with portfolio_tab:
     render_portfolio(api_client)
+with assistant_tab:
+    render_evidence_assistant(api_client)
 with monitoring_tab:
     render_monitoring(api_client)
 with governance_tab:

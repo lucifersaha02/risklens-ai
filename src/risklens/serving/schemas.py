@@ -174,3 +174,36 @@ class MonitoringSummaryResponse(BaseModel):
     labels_available: bool
     performance_drift_measured: bool
     post_holdout_tuning_permitted: bool
+
+
+class EvidencePassage(BaseModel):
+    """One cited passage returned by the governance evidence assistant."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    citation: str
+    relevance_score: float = Field(ge=0)
+    excerpt: str
+
+
+class EvidenceAssistantResponse(BaseModel):
+    """Guarded evidence response containing no autonomous lending recommendation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    question: str
+    answer_type: Literal["grounded_evidence_briefing", "insufficient_evidence"]
+    summary: str
+    evidence: list[EvidencePassage]
+    citations: list[str]
+    disclosures: list[str]
+    human_review_required: bool
+    generated_by_llm: bool
+
+
+class EvidenceAssistantRequest(BaseModel):
+    """Bounded analyst question accepted by the evidence endpoint."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    question: str = Field(min_length=1, max_length=1000)

@@ -7,7 +7,14 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from risklens.api.main import app, get_monitoring_summary, get_portfolio_summary, get_scorer
+from risklens.api.main import (
+    app,
+    get_evidence_assistant,
+    get_monitoring_summary,
+    get_portfolio_summary,
+    get_scorer,
+)
+from risklens.rag.assistant import AssistantResponse
 from risklens.serving.inference import ApplicantNotFoundError
 from risklens.serving.schemas import (
     ModelInfoResponse,
@@ -107,6 +114,23 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Any:
         performance_drift_measured=False,
         post_holdout_tuning_permitted=False,
     )
+    app.dependency_overrides[get_evidence_assistant] = lambda: (
+        lambda question: AssistantResponse(
+            question=question,
+            answer_type="grounded_evidence_briefing",
+            summary="Retrieved trusted evidence.",
+            evidence=[
+                {
+                    "citation": "[reports/model_card.md#Prohibited use]",
+                    "relevance_score": 0.8,
+                    "excerpt": "Autonomous credit approval is prohibited.",
+                }
+            ],
+            citations=["[reports/model_card.md#Prohibited use]"],
+            disclosures=["Human review required."],
+            human_review_required=True,
+        )
+    )
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
@@ -154,6 +178,24 @@ def test_monitoring_summary_distinguishes_feature_and_prediction_drift(
     assert response.json()["overall_severity"] == "critical"
     assert response.json()["prediction_drift"]["severity"] == "stable"
     assert response.json()["performance_drift_measured"] is False
+
+
+def test_evidence_assistant_requires_api_key(client: TestClient) -> None:
+    response = client.post("/evidence-assistant/query", json={"question": "What is prohibited?"})
+    assert response.status_code == 401
+
+
+def test_evidence_assistant_returns_cited_human_review_contract(client: TestClient) -> None:
+    response = client.post(
+        "/evidence-assistant/query",
+        json={"question": "What is prohibited?"},
+        headers={"X-API-Key": "test-secret"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["human_review_required"] is True
+    assert payload["generated_by_llm"] is False
+    assert payload["evidence"][0]["citation"] in payload["citations"]
 
 
 def test_unknown_applicant_returns_sanitized_404(client: TestClient) -> None:

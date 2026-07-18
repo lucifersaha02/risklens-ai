@@ -7,6 +7,7 @@ from typing import Any
 import httpx
 
 from risklens.serving.schemas import (
+    EvidenceAssistantResponse,
     ModelInfoResponse,
     MonitoringSummaryResponse,
     PortfolioSummaryResponse,
@@ -54,6 +55,27 @@ class RiskLensAPIClient:
                 "RiskLens API is unavailable or returned invalid data"
             ) from error
 
+    def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Execute an authenticated JSON POST and normalize failures."""
+        try:
+            with httpx.Client(
+                base_url=self.base_url,
+                headers={"X-API-Key": self.api_key},
+                timeout=self.timeout_seconds,
+                transport=self.transport,
+            ) as client:
+                response = client.post(path, json=payload)
+            response.raise_for_status()
+            return dict(response.json())
+        except httpx.HTTPStatusError as error:
+            payload = error.response.json()
+            detail = payload.get("detail", payload.get("error", "API request failed"))
+            raise RiskLensAPIError(str(detail)) from error
+        except (httpx.RequestError, ValueError) as error:
+            raise RiskLensAPIError(
+                "RiskLens API is unavailable or returned invalid data"
+            ) from error
+
     def health(self) -> dict[str, Any]:
         """Return API readiness data."""
         return self._get("/health")
@@ -77,4 +99,10 @@ class RiskLensAPIClient:
                 f"/predict/{applicant_id}",
                 params={"reason_count": reason_count},
             )
+        )
+
+    def ask_evidence_assistant(self, question: str) -> EvidenceAssistantResponse:
+        """Return a guarded, citation-backed governance evidence briefing."""
+        return EvidenceAssistantResponse.model_validate(
+            self._post("/evidence-assistant/query", {"question": question})
         )
