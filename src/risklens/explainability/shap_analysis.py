@@ -212,8 +212,9 @@ def build_full_history_shap_explanations(
     targets = sample.pop("TARGET").astype(int)
 
     engineered = pipeline.named_steps["features"].transform(sample)
+    governed = pipeline.named_steps["governance"].transform(engineered)
     preprocessor = pipeline.named_steps["preprocessor"]
-    transformed = preprocessor.transform(engineered)
+    transformed = preprocessor.transform(governed)
     feature_names = preprocessor.get_feature_names_out()
     xgboost_model = pipeline.named_steps["model"]
     explainer = shap.TreeExplainer(xgboost_model)
@@ -256,6 +257,7 @@ def build_full_history_shap_explanations(
         "transformed_feature_count": int(len(feature_names)),
         "local_explanations": int(len(local_explanations)),
         "calibration_method": calibrated_model.method,
+        "excluded_decision_features": list(pipeline.named_steps["governance"].excluded_features),
         "shap_output_space": "raw_xgboost_margin_before_probability_calibration",
         "maximum_shap_additivity_error": maximum_additivity_error,
         "holdout_accessed": False,

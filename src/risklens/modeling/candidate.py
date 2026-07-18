@@ -16,6 +16,7 @@ from xgboost import XGBClassifier
 from risklens.config import METRICS_DIR, MODEL_DIR
 from risklens.data.splitting import MODELING_CONFIG_PATH, load_modeling_config
 from risklens.features.application import ApplicationFeatureEngineer, add_application_features
+from risklens.features.governance import FeatureGovernanceSelector, apply_feature_governance
 from risklens.features.preprocessing import build_preprocessor
 from risklens.modeling.baseline import load_train_validation_data
 from risklens.modeling.metrics import evaluate_probabilities
@@ -35,10 +36,12 @@ def build_xgboost_pipeline(
     reg_lambda: float = 2.0,
     tree_method: str = "hist",
     random_seed: int = 42,
+    excluded_features: list[str] | tuple[str, ...] = (),
 ) -> Pipeline:
     """Build an unfitted end-to-end XGBoost pipeline."""
     engineered_sample = add_application_features(sample_frame)
-    preprocessor = build_preprocessor(engineered_sample)
+    governed_sample = apply_feature_governance(engineered_sample, excluded_features)
+    preprocessor = build_preprocessor(governed_sample)
     model = XGBClassifier(
         n_estimators=n_estimators,
         max_depth=max_depth,
@@ -56,6 +59,7 @@ def build_xgboost_pipeline(
     return Pipeline(
         steps=[
             ("features", ApplicationFeatureEngineer()),
+            ("governance", FeatureGovernanceSelector(excluded_features)),
             ("preprocessor", preprocessor),
             ("model", model),
         ]

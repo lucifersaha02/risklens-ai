@@ -101,6 +101,10 @@ def train_full_history_candidate(
     random_seed = int(config["random_seed"])
     threshold = float(config["baseline"]["decision_threshold"])
     history_filename = str(config["feature_store"]["output_file"])
+    governance_config = config["feature_governance"]
+    excluded_features = [
+        str(feature) for feature in governance_config["excluded_decision_features"]
+    ]
 
     train, validation = load_full_history_train_validation_data(history_filename=history_filename)
     train_target = train.pop("TARGET").astype(int)
@@ -116,6 +120,7 @@ def train_full_history_candidate(
         reg_lambda=float(model_config["reg_lambda"]),
         tree_method=str(model_config["tree_method"]),
         random_seed=random_seed,
+        excluded_features=excluded_features,
     )
     cross_validator = StratifiedKFold(
         n_splits=int(cv_config["folds"]), shuffle=True, random_state=random_seed
@@ -146,6 +151,11 @@ def train_full_history_candidate(
         "training_rows": int(len(train)),
         "validation_rows": int(len(validation)),
         "random_seed": random_seed,
+        "feature_governance": {
+            "policy_name": str(governance_config["policy_name"]),
+            "excluded_decision_features": excluded_features,
+            "rationale": str(governance_config["rationale"]),
+        },
         "cross_validation_folds": int(cv_config["folds"]),
         "cross_validation": summarize_cross_validation(scores),
         "validation": validation_metrics,

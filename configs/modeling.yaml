@@ -90,3 +90,17 @@ explainability:
   global_top_features: 30
   local_applicants: 10
   local_reason_codes_per_direction: 5
+
+feature_governance:
+  policy_name: sensitive_attributes_audit_only_v1
+  excluded_decision_features:
+    - CODE_GENDER
+    - DAYS_BIRTH
+    - AGE_YEARS
+    - NAME_FAMILY_STATUS
+  audit_only_attributes:
+    - CODE_GENDER
+    - AGE_BAND
+  rationale: >-
+    Direct gender, age, and family-status attributes are excluded from automated
+    risk scoring and retained only for diagnostic governance and subgroup audits.
