@@ -159,7 +159,7 @@ class LocalKnowledgeIndex:
             ngram_range=(1, 2),
             sublinear_tf=True,
         )
-        matrix = vectorizer.fit_transform([chunk.text for chunk in chunks])
+        matrix = vectorizer.fit_transform([f"{chunk.section}\n{chunk.text}" for chunk in chunks])
         return cls(vectorizer, matrix, chunks)
 
     def search(

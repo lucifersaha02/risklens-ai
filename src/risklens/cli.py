@@ -27,6 +27,7 @@ from risklens.modeling.full_history_decision import (
     define_full_history_decision_policy,
 )
 from risklens.monitoring.drift import build_monitoring_baseline, monitor_test_population
+from risklens.rag.assistant import answer_governance_question
 from risklens.rag.knowledge_base import (
     build_knowledge_index,
     evaluate_knowledge_retrieval,
@@ -495,6 +496,13 @@ def evaluate_rag_retrieval() -> None:
         f"Hit rate@{report['top_k']}: {report['source_hit_rate_at_k']:.2%}; "
         f"MRR: {report['mean_reciprocal_rank']:.4f}"
     )
+
+
+@app.command("ask-evidence-assistant")
+def ask_evidence_assistant(question: str = typer.Argument(...)) -> None:
+    """Return a guarded, citation-backed project evidence briefing."""
+    response = answer_governance_question(question)
+    typer.echo(json.dumps(response.as_dict(), indent=2))
 
 
 if __name__ == "__main__":

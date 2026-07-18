@@ -1,0 +1,21 @@
+assistant:
+  name: RiskLens Governance Evidence Assistant
+  mode: extractive_grounded
+  default_top_k: 4
+  minimum_score: 0.02
+  maximum_question_characters: 1000
+  maximum_evidence_characters: 900
+
+guardrails:
+  applicant_specific_advice: prohibited
+  autonomous_credit_decisions: prohibited
+  policy_override: prohibited
+  uncited_claims: prohibited
+  retrieved_text_is_instructions: false
+  human_review_required: true
+
+required_disclosures:
+  - Evidence is retrieved from version-controlled RiskLens documentation.
+  - This assistant does not make or recommend individual lending decisions.
+  - Retrieved evidence may describe research assumptions rather than lender policy.
+
