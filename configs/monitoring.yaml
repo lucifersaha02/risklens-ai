@@ -1,0 +1,18 @@
+reference:
+  dataset_split: validation
+  maximum_features: 100
+  quantile_bins: 10
+
+population_stability_index:
+  warning_threshold: 0.10
+  critical_threshold: 0.25
+  epsilon: 0.000001
+
+data_quality:
+  minimum_batch_rows: 1000
+  maximum_duplicate_id_rate: 0.0
+  require_target_absent: true
+
+interpretation: >-
+  PSI thresholds are operational heuristics for investigation. They do not prove
+  performance degradation, causality, fairness, or the need to retrain the frozen model.

@@ -26,6 +26,7 @@ from risklens.modeling.full_history_calibration import (
 from risklens.modeling.full_history_decision import (
     define_full_history_decision_policy,
 )
+from risklens.monitoring.drift import build_monitoring_baseline, monitor_test_population
 from risklens.serving.inference import FrozenRiskScorer
 
 app = typer.Typer(
@@ -411,6 +412,37 @@ def serve_dashboard(
         str(port),
     ]
     raise SystemExit(streamlit_cli.main())
+
+
+@app.command("build-monitoring-baseline")
+def create_monitoring_baseline() -> None:
+    """Build the frozen validation reference for drift monitoring."""
+    typer.echo("Building frozen-model monitoring reference...")
+    baseline = build_monitoring_baseline()
+    typer.secho("Monitoring reference completed.", fg=typer.colors.GREEN)
+    typer.echo(
+        f"Rows: {baseline['reference_rows']:,}; features: {baseline['monitored_feature_count']:,}"
+    )
+    typer.echo("No target values were used and the frozen model was not changed.")
+
+
+@app.command("monitor-test-population")
+def monitor_unlabeled_test_population() -> None:
+    """Compare the unlabeled test population with the frozen reference."""
+    typer.echo("Monitoring unlabeled Home Credit test-population drift...")
+    report = monitor_test_population()
+    prediction = report["prediction_drift"]
+    counts = report["feature_severity_counts"]
+    typer.secho(
+        f"Overall monitoring severity: {report['overall_severity']}",
+        fg=(typer.colors.GREEN if report["overall_severity"] == "stable" else typer.colors.YELLOW),
+    )
+    typer.echo(
+        f"Prediction PSI {prediction['psi']:.4f} ({prediction['severity']}); "
+        f"feature alerts: {counts['warning']} warning, {counts['critical']} critical"
+    )
+    typer.echo("Labels are unavailable, so performance drift was not measured.")
+    typer.echo("Monitoring alerts do not authorize post-holdout model tuning.")
 
 
 if __name__ == "__main__":
