@@ -1,0 +1,29 @@
+{
+  "release_status": "pre_holdout_frozen_research_prototype",
+  "model": "full_history_xgboost_calibrated",
+  "locked_threshold": 0.166667,
+  "calibration_method": "sigmoid",
+  "governance_policy": "sensitive_attributes_audit_only_v1",
+  "excluded_decision_features": [
+    "CODE_GENDER",
+    "DAYS_BIRTH",
+    "AGE_YEARS",
+    "NAME_FAMILY_STATUS"
+  ],
+  "artifacts": {
+    "candidate_model": {
+      "path": "models\\full_history_xgboost_candidate.joblib",
+      "sha256": "7d789491e62382fcd3698d8eccd73cd0ebcc9f070f8ce9a03cac888e25b52af0"
+    },
+    "calibrated_model": {
+      "path": "models\\full_history_xgboost_calibrated.joblib",
+      "sha256": "697bafda2ed88aed69c04944fd3a78b31db4030b26ad87ff8498868688406278"
+    },
+    "modeling_config": {
+      "path": "configs\\modeling.yaml",
+      "sha256": "2c7d08aee5f737cc4d11ba8e7671d7bbc1deb6cab0e88dbc2466e1d413b32c92"
+    }
+  },
+  "holdout_accessed": false,
+  "post_holdout_tuning_permitted": false
+}

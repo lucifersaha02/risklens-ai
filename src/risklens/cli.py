@@ -12,6 +12,7 @@ from risklens.explainability.shap_analysis import build_full_history_shap_explan
 from risklens.fairness.evaluation import evaluate_responsible_ai
 from risklens.fairness.full_history import evaluate_full_history_responsible_ai
 from risklens.features.history import build_history_feature_store
+from risklens.governance.model_card import build_model_card
 from risklens.modeling.baseline import train_baselines
 from risklens.modeling.calibration import calibrate_candidate
 from risklens.modeling.candidate import train_xgboost_candidate
@@ -315,6 +316,19 @@ def explain_full_history() -> None:
     )
     typer.echo("SHAP explains model behavior, not causality.")
     typer.echo("The final holdout was not accessed.")
+
+
+@app.command("build-model-card")
+def create_model_card() -> None:
+    """Freeze governed artifacts and build the pre-holdout model card."""
+    ensure_output_directories()
+    typer.echo("Freezing governed model artifacts and building the model card...")
+    freeze = build_model_card()
+    typer.secho("Model governance freeze completed.", fg=typer.colors.GREEN)
+    typer.echo(f"Model: {freeze['model']}")
+    typer.echo(f"Governance policy: {freeze['governance_policy']}")
+    typer.echo("Candidate, calibrated-model, and configuration hashes recorded.")
+    typer.echo("The final holdout remains sealed.")
 
 
 if __name__ == "__main__":
