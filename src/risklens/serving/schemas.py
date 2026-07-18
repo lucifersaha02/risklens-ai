@@ -111,3 +111,66 @@ class PortfolioSummaryResponse(BaseModel):
     confidence_intervals: dict[str, ConfidenceInterval]
     subgroup_gaps: SubgroupGapSummary
     post_holdout_tuning_permitted: bool
+
+
+class DriftFeature(BaseModel):
+    """PSI alert for one monitored transformed feature."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    feature: str
+    psi: float = Field(ge=0)
+    severity: Literal["stable", "warning", "critical"]
+
+
+class PredictionDrift(BaseModel):
+    """Calibrated prediction-distribution monitoring summary."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    psi: float = Field(ge=0)
+    severity: Literal["stable", "warning", "critical"]
+    reference_mean_probability: float = Field(ge=0, le=1)
+    current_mean_probability: float = Field(ge=0, le=1)
+
+
+class FeatureSeverityCounts(BaseModel):
+    """Counts of monitored features by alert level."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    stable: int = Field(ge=0)
+    warning: int = Field(ge=0)
+    critical: int = Field(ge=0)
+
+
+class MonitoringDataQuality(BaseModel):
+    """Current-batch data-quality checks."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    duplicate_id_rate: float = Field(ge=0, le=1)
+    target_present: bool
+    alerts: list[str]
+
+
+class MonitoringSummaryResponse(BaseModel):
+    """Read-only drift snapshot exposed to operations and the dashboard."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    model: str
+    model_version: str
+    reference_split: str
+    current_population: str
+    reference_rows: int = Field(gt=0)
+    current_rows: int = Field(gt=0)
+    overall_severity: Literal["stable", "warning", "critical"]
+    prediction_drift: PredictionDrift
+    feature_severity_counts: FeatureSeverityCounts
+    top_feature_drift: list[DriftFeature]
+    data_quality: MonitoringDataQuality
+    interpretation: str
+    labels_available: bool
+    performance_drift_measured: bool
+    post_holdout_tuning_permitted: bool

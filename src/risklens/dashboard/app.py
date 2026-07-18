@@ -173,6 +173,69 @@ def render_governance(client: RiskLensAPIClient) -> None:
     st.error("Post-holdout model tuning is prohibited and technically recorded in the freeze.")
 
 
+def render_monitoring(client: RiskLensAPIClient) -> None:
+    """Render the latest unlabeled data-quality and drift snapshot."""
+    st.subheader("Frozen-model monitoring")
+    try:
+        summary = client.monitoring_summary()
+    except RiskLensAPIError as error:
+        st.error(str(error))
+        return
+
+    if summary.overall_severity == "critical":
+        st.error("Critical feature-drift investigation required")
+    elif summary.overall_severity == "warning":
+        st.warning("Monitoring warning requires investigation")
+    else:
+        st.success("Monitored population is stable")
+
+    prediction = summary.prediction_drift
+    columns = st.columns(4)
+    columns[0].metric("Prediction PSI", f"{prediction.psi:.4f}")
+    columns[1].metric("Prediction status", prediction.severity.title())
+    columns[2].metric("Reference mean risk", f"{prediction.reference_mean_probability:.2%}")
+    columns[3].metric("Current mean risk", f"{prediction.current_mean_probability:.2%}")
+
+    counts = summary.feature_severity_counts
+    st.caption(
+        f"{counts.stable} stable features · {counts.warning} warnings · "
+        f"{counts.critical} critical alerts"
+    )
+    drift_frame = pd.DataFrame([item.model_dump() for item in summary.top_feature_drift[:10]])
+    color_map = {"stable": "#2E8B57", "warning": "#E0A800", "critical": "#B02A37"}
+    colors = [color_map[level] for level in drift_frame["severity"]]
+    figure = go.Figure(
+        go.Bar(
+            x=drift_frame["psi"],
+            y=drift_frame["feature"],
+            orientation="h",
+            marker_color=colors,
+        )
+    )
+    figure.update_layout(
+        title="Highest transformed-feature PSI",
+        xaxis_title="Population Stability Index",
+        yaxis={"autorange": "reversed"},
+        height=470,
+    )
+    st.plotly_chart(figure, width="stretch")
+
+    quality = summary.data_quality
+    st.markdown("**Data-quality checks**")
+    st.write(
+        {
+            "duplicate_id_rate": quality.duplicate_id_rate,
+            "target_present": quality.target_present,
+            "alerts": quality.alerts,
+        }
+    )
+    st.warning(
+        "Labels are unavailable, so this snapshot measures population drift—not actual "
+        "performance degradation. Alerts require investigation and do not authorize tuning."
+    )
+    st.caption(summary.interpretation)
+
+
 st.title("RiskLens AI")
 st.caption("Explainable Credit Risk Intelligence Platform")
 with st.sidebar:
@@ -197,12 +260,14 @@ except RiskLensAPIError as error:
     st.error(str(error))
     st.stop()
 
-applicant_tab, portfolio_tab, governance_tab = st.tabs(
-    ["Applicant", "Portfolio evidence", "Governance"]
+applicant_tab, portfolio_tab, monitoring_tab, governance_tab = st.tabs(
+    ["Applicant", "Portfolio evidence", "Monitoring", "Governance"]
 )
 with applicant_tab:
     render_applicant(api_client)
 with portfolio_tab:
     render_portfolio(api_client)
+with monitoring_tab:
+    render_monitoring(api_client)
 with governance_tab:
     render_governance(api_client)

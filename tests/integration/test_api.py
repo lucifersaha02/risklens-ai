@@ -7,10 +7,11 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from risklens.api.main import app, get_portfolio_summary, get_scorer
+from risklens.api.main import app, get_monitoring_summary, get_portfolio_summary, get_scorer
 from risklens.serving.inference import ApplicantNotFoundError
 from risklens.serving.schemas import (
     ModelInfoResponse,
+    MonitoringSummaryResponse,
     PortfolioSummaryResponse,
     PredictionResponse,
 )
@@ -82,6 +83,30 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Any:
         },
         post_holdout_tuning_permitted=False,
     )
+    app.dependency_overrides[get_monitoring_summary] = lambda: MonitoringSummaryResponse(
+        model="full_history_xgboost_calibrated",
+        model_version="abc123",
+        reference_split="validation",
+        current_population="unlabeled_test",
+        reference_rows=100,
+        current_rows=50,
+        overall_severity="critical",
+        prediction_drift={
+            "psi": 0.01,
+            "severity": "stable",
+            "reference_mean_probability": 0.08,
+            "current_mean_probability": 0.079,
+        },
+        feature_severity_counts={"stable": 99, "warning": 0, "critical": 1},
+        top_feature_drift=[
+            {"feature": "CREDIT_ANNUITY_RATIO", "psi": 1.64, "severity": "critical"}
+        ],
+        data_quality={"duplicate_id_rate": 0.0, "target_present": False, "alerts": []},
+        interpretation="Investigation heuristic only.",
+        labels_available=False,
+        performance_drift_measured=False,
+        post_holdout_tuning_permitted=False,
+    )
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
@@ -119,6 +144,16 @@ def test_portfolio_summary_returns_frozen_evidence(client: TestClient) -> None:
     assert response.status_code == 200
     assert response.json()["metrics"]["roc_auc"] == 0.78
     assert response.json()["post_holdout_tuning_permitted"] is False
+
+
+def test_monitoring_summary_distinguishes_feature_and_prediction_drift(
+    client: TestClient,
+) -> None:
+    response = client.get("/monitoring-summary", headers={"X-API-Key": "test-secret"})
+    assert response.status_code == 200
+    assert response.json()["overall_severity"] == "critical"
+    assert response.json()["prediction_drift"]["severity"] == "stable"
+    assert response.json()["performance_drift_measured"] is False
 
 
 def test_unknown_applicant_returns_sanitized_404(client: TestClient) -> None:

@@ -8,6 +8,7 @@ import httpx
 
 from risklens.serving.schemas import (
     ModelInfoResponse,
+    MonitoringSummaryResponse,
     PortfolioSummaryResponse,
     PredictionResponse,
 )
@@ -64,6 +65,10 @@ class RiskLensAPIClient:
     def portfolio_summary(self) -> PortfolioSummaryResponse:
         """Return final immutable portfolio evidence."""
         return PortfolioSummaryResponse.model_validate(self._get("/portfolio-summary"))
+
+    def monitoring_summary(self) -> MonitoringSummaryResponse:
+        """Return the latest drift and data-quality monitoring snapshot."""
+        return MonitoringSummaryResponse.model_validate(self._get("/monitoring-summary"))
 
     def predict(self, applicant_id: int, reason_count: int = 5) -> PredictionResponse:
         """Return a governed prediction with local reason codes."""

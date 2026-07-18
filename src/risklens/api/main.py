@@ -21,6 +21,7 @@ from risklens.config import METRICS_DIR, REPORT_DIR
 from risklens.serving.inference import ApplicantNotFoundError, FrozenRiskScorer
 from risklens.serving.schemas import (
     ModelInfoResponse,
+    MonitoringSummaryResponse,
     PortfolioSummaryResponse,
     PredictionResponse,
 )
@@ -95,6 +96,15 @@ def get_portfolio_summary() -> PortfolioSummaryResponse:
         },
         post_holdout_tuning_permitted=report["post_holdout_tuning_permitted"],
     )
+
+
+@lru_cache(maxsize=1)
+def get_monitoring_summary() -> MonitoringSummaryResponse:
+    """Load the latest machine-readable frozen-model monitoring snapshot."""
+    path = METRICS_DIR / "test_population_monitoring.json"
+    if not path.exists():
+        raise FileNotFoundError("Run `risklens monitor-test-population` first")
+    return MonitoringSummaryResponse.model_validate_json(path.read_text(encoding="utf-8"))
 
 
 def require_api_key(
@@ -226,6 +236,19 @@ def portfolio_summary(
     summary: Annotated[PortfolioSummaryResponse, Depends(get_portfolio_summary)],
 ) -> PortfolioSummaryResponse:
     """Return immutable holdout and subgroup evidence for the dashboard."""
+    return summary
+
+
+@app.get(
+    "/monitoring-summary",
+    response_model=MonitoringSummaryResponse,
+    dependencies=[Depends(require_api_key)],
+    tags=["monitoring"],
+)
+def monitoring_summary(
+    summary: Annotated[MonitoringSummaryResponse, Depends(get_monitoring_summary)],
+) -> MonitoringSummaryResponse:
+    """Return the latest drift and data-quality monitoring snapshot."""
     return summary
 
 
