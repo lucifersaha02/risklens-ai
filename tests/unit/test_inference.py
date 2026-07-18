@@ -8,6 +8,7 @@ import pytest
 
 from risklens.governance.model_card import sha256_file
 from risklens.serving.inference import (
+    ApplicantNotFoundError,
     load_applicant_feature_row,
     policy_action,
     verify_serving_freeze,
@@ -54,7 +55,7 @@ def test_applicant_loader_rejects_unknown_id(tmp_path: Path) -> None:
     raw.mkdir()
     interim.mkdir()
     pd.DataFrame({"SK_ID_CURR": [1]}).to_csv(raw / "application_test.csv", index=False)
-    with pytest.raises(KeyError, match="was not found"):
+    with pytest.raises(ApplicantNotFoundError, match="was not found"):
         load_applicant_feature_row(2, raw_data_dir=raw, interim_dir=interim)
 
 

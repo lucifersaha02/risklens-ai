@@ -19,6 +19,10 @@ from risklens.modeling.full_history_calibration import (
 from risklens.serving.schemas import ModelInfoResponse, PredictionResponse
 
 
+class ApplicantNotFoundError(LookupError):
+    """Raised when an applicant identifier is absent from the demo feature store."""
+
+
 def verify_serving_freeze(
     report_dir: Path = REPORT_DIR,
     project_root: Path | None = None,
@@ -67,7 +71,7 @@ def load_applicant_feature_row(
                 matches.append(selected)
                 break
     if not matches:
-        raise KeyError(f"Applicant {applicant_id} was not found")
+        raise ApplicantNotFoundError(f"Applicant {applicant_id} was not found")
     application = pd.concat(matches, ignore_index=True)
     if len(application) != 1:
         raise ValueError(f"Applicant {applicant_id} appears more than once")

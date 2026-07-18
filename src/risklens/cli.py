@@ -378,5 +378,16 @@ def score_applicant(
     typer.echo(response.model_dump_json(indent=2))
 
 
+@app.command("serve-api")
+def serve_api(
+    host: str = typer.Option("127.0.0.1", "--host"),
+    port: int = typer.Option(8000, "--port", min=1, max=65535),
+) -> None:
+    """Run the authenticated RiskLens AI FastAPI service."""
+    import uvicorn
+
+    uvicorn.run("risklens.api.main:app", host=host, port=port, reload=False)
+
+
 if __name__ == "__main__":
     app()

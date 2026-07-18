@@ -66,6 +66,9 @@ where = ["src"]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers --cov=src/risklens --cov-report=term-missing"
 pythonpath = ["src"]
+filterwarnings = [
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:starlette.exceptions.StarletteDeprecationWarning"
+]
 
 [tool.ruff]
 line-length = 100
