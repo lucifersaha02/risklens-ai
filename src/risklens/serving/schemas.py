@@ -61,3 +61,53 @@ class ModelInfoResponse(BaseModel):
     excluded_decision_features: list[str]
     holdout_accessed: bool
     post_holdout_tuning_permitted: bool
+
+
+class ConfidenceInterval(BaseModel):
+    """Lower and upper bounds for one bootstrap interval."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    lower: float
+    upper: float
+
+
+class PortfolioMetrics(BaseModel):
+    """Frozen final holdout point estimates."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    roc_auc: float
+    average_precision: float
+    brier_score: float
+    log_loss: float
+    recall: float
+    precision: float
+    approval_rate: float
+    cost_per_application: float
+
+
+class SubgroupGapSummary(BaseModel):
+    """Diagnostic max-minus-min gaps on final holdout."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    gender_recall: float
+    gender_false_positive_rate: float
+    age_band_recall: float
+    age_band_false_positive_rate: float
+
+
+class PortfolioSummaryResponse(BaseModel):
+    """Read-only final evidence exposed to the dashboard."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    model_version: str
+    evaluated_at_utc: str
+    holdout_rows: int
+    locked_threshold: float
+    metrics: PortfolioMetrics
+    confidence_intervals: dict[str, ConfidenceInterval]
+    subgroup_gaps: SubgroupGapSummary
+    post_holdout_tuning_permitted: bool

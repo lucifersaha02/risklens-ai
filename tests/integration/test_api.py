@@ -7,9 +7,13 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from risklens.api.main import app, get_scorer
+from risklens.api.main import app, get_portfolio_summary, get_scorer
 from risklens.serving.inference import ApplicantNotFoundError
-from risklens.serving.schemas import ModelInfoResponse, PredictionResponse
+from risklens.serving.schemas import (
+    ModelInfoResponse,
+    PortfolioSummaryResponse,
+    PredictionResponse,
+)
 
 
 class FakeScorer:
@@ -54,6 +58,30 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Any:
     """Return an authenticated test client with a dependency override."""
     monkeypatch.setenv("RISKLENS_API_KEY", "test-secret")
     app.dependency_overrides[get_scorer] = lambda: FakeScorer()
+    app.dependency_overrides[get_portfolio_summary] = lambda: PortfolioSummaryResponse(
+        model_version="abc123",
+        evaluated_at_utc="2026-07-18T00:00:00+00:00",
+        holdout_rows=100,
+        locked_threshold=1 / 6,
+        metrics={
+            "roc_auc": 0.78,
+            "average_precision": 0.27,
+            "brier_score": 0.06,
+            "log_loss": 0.23,
+            "recall": 0.42,
+            "precision": 0.27,
+            "approval_rate": 0.87,
+            "cost_per_application": 0.32,
+        },
+        confidence_intervals={"roc_auc": {"lower": 0.76, "upper": 0.80}},
+        subgroup_gaps={
+            "gender_recall": 0.10,
+            "gender_false_positive_rate": 0.04,
+            "age_band_recall": 0.36,
+            "age_band_false_positive_rate": 0.18,
+        },
+        post_holdout_tuning_permitted=False,
+    )
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
@@ -84,6 +112,13 @@ def test_prediction_returns_human_review_contract(client: TestClient) -> None:
     assert payload["applicant_id"] == 100001
     assert payload["human_decision_required"] is True
     assert "TARGET" not in payload
+
+
+def test_portfolio_summary_returns_frozen_evidence(client: TestClient) -> None:
+    response = client.get("/portfolio-summary", headers={"X-API-Key": "test-secret"})
+    assert response.status_code == 200
+    assert response.json()["metrics"]["roc_auc"] == 0.78
+    assert response.json()["post_holdout_tuning_permitted"] is False
 
 
 def test_unknown_applicant_returns_sanitized_404(client: TestClient) -> None:

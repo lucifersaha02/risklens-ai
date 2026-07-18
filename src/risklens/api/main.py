@@ -17,8 +17,13 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 
+from risklens.config import METRICS_DIR, REPORT_DIR
 from risklens.serving.inference import ApplicantNotFoundError, FrozenRiskScorer
-from risklens.serving.schemas import ModelInfoResponse, PredictionResponse
+from risklens.serving.schemas import (
+    ModelInfoResponse,
+    PortfolioSummaryResponse,
+    PredictionResponse,
+)
 
 LOGGER = logging.getLogger("risklens.api")
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
@@ -48,6 +53,48 @@ class ErrorResponse(BaseModel):
 def get_scorer() -> FrozenRiskScorer:
     """Load and verify the frozen model once per API process."""
     return FrozenRiskScorer()
+
+
+@lru_cache(maxsize=1)
+def get_portfolio_summary() -> PortfolioSummaryResponse:
+    """Load immutable final evidence for the dashboard."""
+    metrics_path = METRICS_DIR / "final_holdout_metrics.json"
+    freeze_path = REPORT_DIR / "model_governance_freeze.json"
+    if not metrics_path.exists() or not freeze_path.exists():
+        raise FileNotFoundError("Final holdout evidence is unavailable")
+    report = json.loads(metrics_path.read_text(encoding="utf-8"))
+    freeze = json.loads(freeze_path.read_text(encoding="utf-8"))
+    if freeze.get("holdout_accessed") is not True:
+        raise RuntimeError("Portfolio evidence is not in final evaluated state")
+    probability = report["probability_metrics"]
+    policy = report["locked_policy_metrics"]
+    diagnostics = report["subgroup_diagnostics"]
+    gender = diagnostics["CODE_GENDER"]["gaps"]
+    age = diagnostics["AGE_BAND"]["gaps"]
+    return PortfolioSummaryResponse(
+        model_version=freeze["artifacts"]["calibrated_model"]["sha256"][:12],
+        evaluated_at_utc=report["evaluated_at_utc"],
+        holdout_rows=report["holdout_rows"],
+        locked_threshold=report["locked_threshold"],
+        metrics={
+            "roc_auc": probability["roc_auc"],
+            "average_precision": probability["average_precision"],
+            "brier_score": probability["brier_score"],
+            "log_loss": probability["log_loss"],
+            "recall": policy["recall"],
+            "precision": policy["precision"],
+            "approval_rate": policy["approval_rate"],
+            "cost_per_application": policy["cost_per_application"],
+        },
+        confidence_intervals=report["confidence_intervals"],
+        subgroup_gaps={
+            "gender_recall": gender["recall_max_min_gap"],
+            "gender_false_positive_rate": gender["false_positive_rate_max_min_gap"],
+            "age_band_recall": age["recall_max_min_gap"],
+            "age_band_false_positive_rate": age["false_positive_rate_max_min_gap"],
+        },
+        post_holdout_tuning_permitted=report["post_holdout_tuning_permitted"],
+    )
 
 
 def require_api_key(
@@ -167,6 +214,19 @@ def model_info(
 ) -> ModelInfoResponse:
     """Return frozen governance metadata."""
     return scorer.model_info()
+
+
+@app.get(
+    "/portfolio-summary",
+    response_model=PortfolioSummaryResponse,
+    dependencies=[Depends(require_api_key)],
+    tags=["governance"],
+)
+def portfolio_summary(
+    summary: Annotated[PortfolioSummaryResponse, Depends(get_portfolio_summary)],
+) -> PortfolioSummaryResponse:
+    """Return immutable holdout and subgroup evidence for the dashboard."""
+    return summary
 
 
 @app.get(

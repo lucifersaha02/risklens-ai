@@ -1,6 +1,7 @@
 """Command-line interface for RiskLens AI."""
 
 import json
+from pathlib import Path
 
 import typer
 
@@ -387,6 +388,29 @@ def serve_api(
     import uvicorn
 
     uvicorn.run("risklens.api.main:app", host=host, port=port, reload=False)
+
+
+@app.command("serve-dashboard")
+def serve_dashboard(
+    host: str = typer.Option("127.0.0.1", "--host"),
+    port: int = typer.Option(8501, "--port", min=1, max=65535),
+) -> None:
+    """Run the Streamlit dashboard as an API-only client."""
+    import sys
+
+    from streamlit.web import cli as streamlit_cli
+
+    dashboard_path = Path(__file__).resolve().parent / "dashboard" / "app.py"
+    sys.argv = [
+        "streamlit",
+        "run",
+        str(dashboard_path),
+        "--server.address",
+        host,
+        "--server.port",
+        str(port),
+    ]
+    raise SystemExit(streamlit_cli.main())
 
 
 if __name__ == "__main__":
