@@ -8,6 +8,7 @@ from risklens.config import METRICS_DIR, ensure_output_directories
 from risklens.data.audit import run_data_audit
 from risklens.data.splitting import create_and_save_splits
 from risklens.data.validation import DataValidationError, validate_raw_dataset
+from risklens.explainability.shap_analysis import build_full_history_shap_explanations
 from risklens.fairness.evaluation import evaluate_responsible_ai
 from risklens.fairness.full_history import evaluate_full_history_responsible_ai
 from risklens.features.history import build_history_feature_store
@@ -295,6 +296,24 @@ def evaluate_full_history_fairness() -> None:
         )
     typer.secho("Full-history responsible-AI diagnostic completed.", fg=typer.colors.GREEN)
     typer.echo("This diagnostic is not proof of fairness or legal compliance.")
+    typer.echo("The final holdout was not accessed.")
+
+
+@app.command("explain-full-history")
+def explain_full_history() -> None:
+    """Build global and applicant-level SHAP explanations."""
+    ensure_output_directories()
+    typer.echo("Building validation-only SHAP explanations...")
+    report = build_full_history_shap_explanations()
+    typer.secho("SHAP explainability artifacts completed.", fg=typer.colors.GREEN)
+    typer.echo(
+        f"Explained {report['sample_rows']:,} applicants across "
+        f"{report['transformed_feature_count']:,} transformed features."
+    )
+    typer.echo(
+        f"Maximum raw-margin additivity error: {report['maximum_shap_additivity_error']:.6g}"
+    )
+    typer.echo("SHAP explains model behavior, not causality.")
     typer.echo("The final holdout was not accessed.")
 
 

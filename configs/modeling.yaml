@@ -84,3 +84,9 @@ full_history_xgboost:
   min_child_weight: 20
   reg_lambda: 2.0
   tree_method: hist
+
+explainability:
+  validation_sample_size: 2000
+  global_top_features: 30
+  local_applicants: 10
+  local_reason_codes_per_direction: 5
