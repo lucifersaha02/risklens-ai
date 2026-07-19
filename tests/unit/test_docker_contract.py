@@ -14,6 +14,21 @@ def test_api_extra_declares_dashboard_http_client() -> None:
     assert any(dependency.startswith("httpx") for dependency in api_dependencies)
 
 
+def test_ci_checks_quality_tests_and_container_build() -> None:
+    workflow = (PROJECT_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    for required in (
+        "permissions:\n  contents: read",
+        "ruff check src tests",
+        "ruff format --check src tests",
+        "pytest tests/unit tests/integration --no-cov -q",
+        "docker compose config --quiet",
+        "docker build",
+        "--target runtime",
+        "persist-credentials: false",
+    ):
+        assert required in workflow
+
+
 def test_dockerfile_runs_as_non_root_and_uses_python_312() -> None:
     dockerfile = (PROJECT_ROOT / "Dockerfile").read_text(encoding="utf-8")
     assert "FROM python:3.12.10-slim" in dockerfile

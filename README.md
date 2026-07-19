@@ -57,6 +57,22 @@ https://www.kaggle.com/competitions/home-credit-default-risk/data
 
 Raw competition data is not included in this repository. Users must download it directly from Kaggle and accept the applicable competition rules.
 
+## Continuous integration
+
+GitHub Actions runs on pushes and pull requests to `main`. The workflow installs Python 3.12,
+checks Ruff linting and formatting, runs the unit and integration test suites, validates the
+Docker Compose configuration, and builds the non-root runtime image. CI does not require or
+upload the private Kaggle data, trained models, generated reports, `.env`, or API keys.
+
+Run the same core quality gates locally before committing:
+
+```powershell
+ruff check src tests
+ruff format --check src tests
+pytest tests/unit tests/integration --no-cov -q
+docker compose config --quiet
+```
+
 ## Docker Compose deployment
 
 The containers package code and Python dependencies, while governed data, model, and report
