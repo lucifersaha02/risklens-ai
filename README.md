@@ -12,6 +12,10 @@
 Review the model evidence, assessment workflows, architecture, responsible-AI controls,
 limitations, and production-minded engineering behind the platform.
 
+> **Interactive application available locally through Docker.** Follow the
+> [Docker Compose deployment](#docker-compose-deployment) instructions to run the authenticated
+> FastAPI service and Streamlit dashboard.
+
 RiskLens AI is an end-to-end credit-risk decision-support research platform built on the
 [Home Credit Default Risk](https://www.kaggle.com/competitions/home-credit-default-risk/data)
 dataset. It combines leakage-safe relational feature engineering, calibrated XGBoost models,
