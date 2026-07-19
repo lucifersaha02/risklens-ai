@@ -1,10 +1,17 @@
 """Static deployment-contract tests that do not require a Docker daemon."""
 
+import tomllib
 from pathlib import Path
 
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_api_extra_declares_dashboard_http_client() -> None:
+    config = tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    api_dependencies = config["project"]["optional-dependencies"]["api"]
+    assert any(dependency.startswith("httpx") for dependency in api_dependencies)
 
 
 def test_dockerfile_runs_as_non_root_and_uses_python_312() -> None:
