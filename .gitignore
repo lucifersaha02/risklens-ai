@@ -64,3 +64,6 @@ Thumbs.db
 build/
 dist/
 *.egg-info/
+
+# Documentation site is versioned and deployed separately by Sites
+/website/
