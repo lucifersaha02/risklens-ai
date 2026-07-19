@@ -33,6 +33,30 @@ def test_serving_accepts_final_evaluated_frozen_artifact(tmp_path: Path) -> None
     assert result["post_holdout_tuning_permitted"] is False
 
 
+def test_serving_accepts_windows_artifact_path_on_any_platform(tmp_path: Path) -> None:
+    reports = tmp_path / "reports"
+    models = tmp_path / "models"
+    reports.mkdir()
+    models.mkdir()
+    model = models / "model.joblib"
+    model.write_bytes(b"frozen")
+    freeze = {
+        "release_status": "final_holdout_evaluated_research_prototype",
+        "post_holdout_tuning_permitted": False,
+        "artifacts": {
+            "model": {
+                "path": r"models\model.joblib",
+                "sha256": sha256_file(model),
+            }
+        },
+    }
+    (reports / "model_governance_freeze.json").write_text(json.dumps(freeze), encoding="utf-8")
+
+    result = verify_serving_freeze(report_dir=reports, project_root=tmp_path)
+
+    assert result["artifacts"]["model"]["path"] == r"models\model.joblib"
+
+
 def test_applicant_loader_excludes_target(tmp_path: Path) -> None:
     raw = tmp_path / "raw"
     interim = tmp_path / "interim"

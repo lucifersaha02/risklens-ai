@@ -42,7 +42,11 @@ def verify_serving_freeze(
     if freeze.get("post_holdout_tuning_permitted") is not False:
         raise RuntimeError("Serving requires a freeze that prohibits model tuning")
     for name, artifact in freeze["artifacts"].items():
-        path = root / Path(str(artifact["path"]))
+        # Governance evidence may be produced on Windows and served from a Linux
+        # container. Normalize the stored relative path without changing the
+        # frozen report or the artifact whose hash is being verified.
+        relative_path = Path(str(artifact["path"]).replace("\\", "/"))
+        path = root / relative_path
         if not path.exists():
             raise FileNotFoundError(f"Frozen serving artifact is missing: {name}")
         if sha256_file(path) != artifact["sha256"]:
