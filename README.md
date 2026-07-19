@@ -7,6 +7,11 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+## [Explore the public RiskLens AI documentation →](https://risklens-ai-docs.codymay2025.chatgpt.site)
+
+Review the model evidence, assessment workflows, architecture, responsible-AI controls,
+limitations, and production-minded engineering behind the platform.
+
 RiskLens AI is an end-to-end credit-risk decision-support research platform built on the
 [Home Credit Default Risk](https://www.kaggle.com/competitions/home-credit-default-risk/data)
 dataset. It combines leakage-safe relational feature engineering, calibrated XGBoost models,
