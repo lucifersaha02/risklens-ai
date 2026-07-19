@@ -20,11 +20,14 @@ from pydantic import BaseModel, ConfigDict
 from risklens.config import METRICS_DIR, REPORT_DIR
 from risklens.rag.assistant import AssistantResponse, answer_governance_question
 from risklens.serving.inference import ApplicantNotFoundError, FrozenRiskScorer
+from risklens.serving.new_application import NewApplicationScorer
 from risklens.serving.schemas import (
     EvidenceAssistantRequest,
     EvidenceAssistantResponse,
     ModelInfoResponse,
     MonitoringSummaryResponse,
+    NewApplicationRequest,
+    NewApplicationResponse,
     PortfolioSummaryResponse,
     PredictionResponse,
 )
@@ -113,6 +116,12 @@ def get_monitoring_summary() -> MonitoringSummaryResponse:
 def get_evidence_assistant() -> Callable[[str], AssistantResponse]:
     """Return the guarded assistant function as an overridable API dependency."""
     return answer_governance_question
+
+
+@lru_cache(maxsize=1)
+def get_new_application_scorer() -> NewApplicationScorer:
+    """Load and hash-verify the separate manual simulator once per process."""
+    return NewApplicationScorer()
 
 
 def require_api_key(
@@ -274,6 +283,22 @@ def query_evidence_assistant(
     """Return cited project evidence while prohibiting individual credit advice."""
     response = assistant(request.question)
     return EvidenceAssistantResponse.model_validate(response.as_dict())
+
+
+@app.post(
+    "/simulate-new-application",
+    response_model=NewApplicationResponse,
+    responses={422: {"model": ErrorResponse}},
+    dependencies=[Depends(require_api_key)],
+    tags=["simulation"],
+)
+def simulate_new_application(
+    request: NewApplicationRequest,
+    scorer: Annotated[NewApplicationScorer, Depends(get_new_application_scorer)],
+    reason_count: Annotated[int, Query(ge=1, le=20)] = 5,
+) -> NewApplicationResponse:
+    """Estimate application-only risk without approving or declining a loan."""
+    return scorer.score(request, reason_count=reason_count)
 
 
 @app.get(

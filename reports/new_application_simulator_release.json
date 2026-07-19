@@ -1,0 +1,54 @@
+{
+  "release_name": "new_application_simulator_v1",
+  "assessment_mode": "application_only_manual_simulation",
+  "parent_data_partition": "train",
+  "original_validation_calibration_holdout_accessed": false,
+  "rows": {
+    "train": 150679,
+    "validation": 21526,
+    "calibration": 21526,
+    "test": 21526
+  },
+  "validation_raw": {
+    "roc_auc": 0.757274,
+    "average_precision": 0.249015,
+    "log_loss": 0.245909,
+    "brier_score": 0.067667,
+    "threshold": 0.166667,
+    "precision": 0.263789,
+    "recall": 0.379747,
+    "f1": 0.311321,
+    "predicted_positive_rate": 0.116232,
+    "observed_positive_rate": 0.08074,
+    "mean_predicted_probability": 0.080901
+  },
+  "test_calibrated": {
+    "roc_auc": 0.756011,
+    "average_precision": 0.2286,
+    "log_loss": 0.247763,
+    "brier_score": 0.068413,
+    "threshold": 0.166667,
+    "precision": 0.245634,
+    "recall": 0.364212,
+    "f1": 0.293395,
+    "predicted_positive_rate": 0.119716,
+    "observed_positive_rate": 0.08074,
+    "mean_predicted_probability": 0.080334
+  },
+  "calibration_method": "sigmoid",
+  "threshold": 0.166667,
+  "excluded_features": [
+    "TARGET",
+    "SK_ID_CURR",
+    "CODE_GENDER",
+    "DAYS_BIRTH",
+    "AGE_YEARS",
+    "NAME_FAMILY_STATUS"
+  ],
+  "limitations": [
+    "Research simulator trained on the public Home Credit dataset.",
+    "Application-only assessment does not use bureau or repayment-history tables.",
+    "Output supports human review and is not an approval or decline decision."
+  ],
+  "artifact_sha256": "157dc1a56962046457c73db202d5b2a2aaea496f92cf061bdbd989a1b419f84a"
+}

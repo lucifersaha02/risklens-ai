@@ -1,0 +1,51 @@
+release:
+  name: new_application_simulator_v1
+  parent_data_partition: train
+  random_seed: 20260719
+  internal_splits:
+    train: 0.70
+    validation: 0.10
+    calibration: 0.10
+    test: 0.10
+
+model:
+  n_estimators: 350
+  max_depth: 4
+  learning_rate: 0.03
+  subsample: 0.85
+  colsample_bytree: 0.85
+  min_child_weight: 20
+  reg_lambda: 2.0
+
+decision_policy:
+  false_negative_cost: 5.0
+  false_positive_cost: 1.0
+  threshold: 0.166667
+
+input_features:
+  numeric:
+    - CNT_CHILDREN
+    - AMT_INCOME_TOTAL
+    - AMT_CREDIT
+    - AMT_ANNUITY
+    - AMT_GOODS_PRICE
+    - DAYS_EMPLOYED
+    - EXT_SOURCE_1
+    - EXT_SOURCE_2
+    - EXT_SOURCE_3
+  categorical:
+    - NAME_CONTRACT_TYPE
+    - FLAG_OWN_CAR
+    - FLAG_OWN_REALTY
+    - NAME_INCOME_TYPE
+    - NAME_EDUCATION_TYPE
+    - NAME_HOUSING_TYPE
+
+excluded_features:
+  - TARGET
+  - SK_ID_CURR
+  - CODE_GENDER
+  - DAYS_BIRTH
+  - AGE_YEARS
+  - NAME_FAMILY_STATUS
+

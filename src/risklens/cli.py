@@ -26,6 +26,7 @@ from risklens.modeling.full_history_calibration import (
 from risklens.modeling.full_history_decision import (
     define_full_history_decision_policy,
 )
+from risklens.modeling.new_application import train_new_application_simulator
 from risklens.monitoring.drift import build_monitoring_baseline, monitor_test_population
 from risklens.rag.assistant import answer_governance_question
 from risklens.rag.knowledge_base import (
@@ -463,6 +464,22 @@ def build_rag_knowledge_index() -> None:
         f"backend: {manifest['backend']}"
     )
     typer.echo("Applicant-specific queries are prohibited.")
+
+
+@app.command("train-new-application-simulator")
+def train_manual_application_simulator() -> None:
+    """Train and freeze the separate application-only simulator release."""
+    typer.echo("Training the governed new-application simulator...")
+    report = train_new_application_simulator()
+    metrics = report["test_calibrated"]
+    typer.secho("New-application simulator release completed.", fg=typer.colors.GREEN)
+    typer.echo(
+        f"Internal test: ROC-AUC {metrics['roc_auc']:.4f}, "
+        f"PR-AUC {metrics['average_precision']:.4f}, "
+        f"Brier {metrics['brier_score']:.4f}"
+    )
+    typer.echo(f"Review threshold: {report['threshold']:.2%}")
+    typer.echo("Only the original training partition was used; the frozen release is unchanged.")
 
 
 @app.command("query-knowledge")

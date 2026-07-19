@@ -14,6 +14,7 @@ trusted_sources:
   - reports/full_history_responsible_ai_report.md
   - reports/shap_explainability_report.md
   - reports/monitoring_report.md
+  - reports/new_application_simulator_model_card.md
 
 security:
   reject_prompt_injection_patterns: true

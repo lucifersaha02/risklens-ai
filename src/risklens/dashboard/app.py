@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from risklens.dashboard.client import RiskLensAPIClient, RiskLensAPIError
+from risklens.serving.schemas import NewApplicationRequest
 
 st.set_page_config(
     page_title="RiskLens AI",
@@ -104,6 +105,121 @@ def render_applicant(client: RiskLensAPIClient) -> None:
         st.caption(
             "SHAP values explain the raw XGBoost margin before sigmoid calibration; "
             "they are not probability percentage-point changes and do not establish causality."
+        )
+
+
+def render_new_application(client: RiskLensAPIClient) -> None:
+    """Render the governed manual application-only risk simulator."""
+    st.subheader("New application risk simulator")
+    st.caption(
+        "Enter application-time information. This application-only research model estimates "
+        "Home Credit payment-difficulty risk; it does not approve or decline loans."
+    )
+    money_left, money_right = st.columns(2)
+    annual_income = money_left.number_input(
+        "Annual income", min_value=1_000.0, value=600_000.0, step=10_000.0
+    )
+    requested_credit = money_right.number_input(
+        "Requested credit", min_value=1_000.0, value=900_000.0, step=10_000.0
+    )
+    annual_annuity = money_left.number_input(
+        "Annual annuity", min_value=100.0, value=50_000.0, step=1_000.0
+    )
+    goods_price = money_right.number_input(
+        "Goods price", min_value=1_000.0, value=850_000.0, step=10_000.0
+    )
+    employment_years = st.slider("Employment history (years)", 0.0, 60.0, 4.0, 0.5)
+
+    st.markdown("**External credit signals**")
+    st.caption(
+        "These are lender/bureau inputs on the Home Credit 0–1 scale, not self-declared scores."
+    )
+    external_columns = st.columns(3)
+    external_1 = external_columns[0].number_input("External source 1", 0.0, 1.0, 0.52, 0.01)
+    external_2 = external_columns[1].number_input("External source 2", 0.0, 1.0, 0.61, 0.01)
+    external_3 = external_columns[2].number_input("External source 3", 0.0, 1.0, 0.49, 0.01)
+
+    category_left, category_right = st.columns(2)
+    contract_type = category_left.selectbox("Contract type", ["Cash loans", "Revolving loans"])
+    income_type = category_right.selectbox(
+        "Income type",
+        [
+            "Working",
+            "Commercial associate",
+            "State servant",
+            "Pensioner",
+            "Businessman",
+            "Student",
+            "Unemployed",
+            "Maternity leave",
+        ],
+    )
+    education_type = category_left.selectbox(
+        "Education",
+        [
+            "Secondary / secondary special",
+            "Higher education",
+            "Incomplete higher",
+            "Lower secondary",
+            "Academic degree",
+        ],
+    )
+    housing_type = category_right.selectbox(
+        "Housing",
+        [
+            "House / apartment",
+            "With parents",
+            "Municipal apartment",
+            "Rented apartment",
+            "Office apartment",
+            "Co-op apartment",
+        ],
+    )
+    detail_columns = st.columns(3)
+    owns_car = detail_columns[0].checkbox("Owns a car")
+    owns_realty = detail_columns[1].checkbox("Owns real estate", value=True)
+    children = detail_columns[2].number_input("Number of children", 0, 20, 0)
+    reason_count = st.slider("Number of explanation factors", 1, 10, 5)
+
+    if st.button("Assess new application", type="primary", width="stretch"):
+        application = NewApplicationRequest(
+            annual_income=annual_income,
+            requested_credit=requested_credit,
+            annual_annuity=annual_annuity,
+            goods_price=goods_price,
+            employment_years=employment_years,
+            external_source_1=external_1,
+            external_source_2=external_2,
+            external_source_3=external_3,
+            contract_type=contract_type,
+            owns_car=owns_car,
+            owns_realty=owns_realty,
+            children=int(children),
+            income_type=income_type,
+            education_type=education_type,
+            housing_type=housing_type,
+        )
+        try:
+            result = client.simulate_new_application(application, reason_count)
+        except RiskLensAPIError as error:
+            st.error(str(error))
+            return
+        probability = result.calibrated_payment_difficulty_probability
+        metric_columns = st.columns(4)
+        metric_columns[0].metric("Estimated payment-difficulty risk", f"{probability:.2%}")
+        metric_columns[1].metric("Review threshold", f"{result.review_threshold:.2%}")
+        metric_columns[2].metric("Risk band", result.risk_band.replace("_", " ").title())
+        metric_columns[3].metric("Data completeness", f"{result.data_completeness:.0%}")
+        if result.review_route == "enhanced_manual_review_recommended":
+            st.warning("Enhanced manual review recommended")
+        else:
+            st.success("Standard human review workflow")
+        if result.data_quality_warnings:
+            st.warning("\n".join(f"• {warning}" for warning in result.data_quality_warnings))
+        st.plotly_chart(reason_chart(result), width="stretch")
+        st.info(
+            "This is an application-only research estimate. It excludes sensitive decision "
+            "features and does not automatically approve or decline the application."
         )
 
 
@@ -291,11 +407,22 @@ except RiskLensAPIError as error:
     st.error(str(error))
     st.stop()
 
-applicant_tab, portfolio_tab, assistant_tab, monitoring_tab, governance_tab = st.tabs(
-    ["Applicant", "Portfolio evidence", "Evidence assistant", "Monitoring", "Governance"]
+applicant_tab, new_application_tab, portfolio_tab, assistant_tab, monitoring_tab, governance_tab = (
+    st.tabs(
+        [
+            "Existing applicant",
+            "New application",
+            "Portfolio evidence",
+            "Evidence assistant",
+            "Monitoring",
+            "Governance",
+        ]
+    )
 )
 with applicant_tab:
     render_applicant(api_client)
+with new_application_tab:
+    render_new_application(api_client)
 with portfolio_tab:
     render_portfolio(api_client)
 with assistant_tab:

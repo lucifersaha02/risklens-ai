@@ -10,6 +10,8 @@ from risklens.serving.schemas import (
     EvidenceAssistantResponse,
     ModelInfoResponse,
     MonitoringSummaryResponse,
+    NewApplicationRequest,
+    NewApplicationResponse,
     PortfolioSummaryResponse,
     PredictionResponse,
 )
@@ -105,4 +107,15 @@ class RiskLensAPIClient:
         """Return a guarded, citation-backed governance evidence briefing."""
         return EvidenceAssistantResponse.model_validate(
             self._post("/evidence-assistant/query", {"question": question})
+        )
+
+    def simulate_new_application(
+        self, application: NewApplicationRequest, reason_count: int = 5
+    ) -> NewApplicationResponse:
+        """Submit a manual application to the governed application-only simulator."""
+        return NewApplicationResponse.model_validate(
+            self._post(
+                f"/simulate-new-application?reason_count={reason_count}",
+                application.model_dump(),
+            )
         )

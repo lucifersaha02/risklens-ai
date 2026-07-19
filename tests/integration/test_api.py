@@ -11,6 +11,7 @@ from risklens.api.main import (
     app,
     get_evidence_assistant,
     get_monitoring_summary,
+    get_new_application_scorer,
     get_portfolio_summary,
     get_scorer,
 )
@@ -19,6 +20,7 @@ from risklens.serving.inference import ApplicantNotFoundError
 from risklens.serving.schemas import (
     ModelInfoResponse,
     MonitoringSummaryResponse,
+    NewApplicationResponse,
     PortfolioSummaryResponse,
     PredictionResponse,
 )
@@ -58,6 +60,28 @@ class FakeScorer:
             explanation_additivity_error=0.0,
             human_decision_required=True,
             adverse_action_notice_ready=False,
+        )
+
+
+class FakeNewApplicationScorer:
+    """Deterministic manual simulator used for API contract tests."""
+
+    def score(self, request: Any, reason_count: int = 5) -> NewApplicationResponse:
+        del request, reason_count
+        return NewApplicationResponse(
+            assessment_mode="application_only_manual_simulation",
+            model="new_application_simulator_v1",
+            model_version="sim123",
+            calibrated_payment_difficulty_probability=0.10,
+            review_threshold=1 / 6,
+            risk_band="moderate_estimated_risk",
+            review_route="standard_human_review",
+            data_completeness=1.0,
+            data_quality_warnings=[],
+            reason_codes={"risk_increasing": [], "risk_reducing": []},
+            explanation_additivity_error=0.0,
+            human_decision_required=True,
+            automatic_approval_or_decline=False,
         )
 
 
@@ -131,6 +155,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Any:
             human_review_required=True,
         )
     )
+    app.dependency_overrides[get_new_application_scorer] = lambda: FakeNewApplicationScorer()
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
@@ -196,6 +221,51 @@ def test_evidence_assistant_returns_cited_human_review_contract(client: TestClie
     assert payload["human_review_required"] is True
     assert payload["generated_by_llm"] is False
     assert payload["evidence"][0]["citation"] in payload["citations"]
+
+
+def test_new_application_simulator_returns_non_decision_contract(client: TestClient) -> None:
+    response = client.post(
+        "/simulate-new-application",
+        headers={"X-API-Key": "test-secret"},
+        json={
+            "annual_income": 600000,
+            "requested_credit": 900000,
+            "annual_annuity": 50000,
+            "goods_price": 850000,
+            "employment_years": 4,
+            "external_source_1": 0.52,
+            "external_source_2": 0.61,
+            "external_source_3": 0.49,
+            "contract_type": "Cash loans",
+            "owns_car": False,
+            "owns_realty": True,
+            "children": 0,
+            "income_type": "Working",
+            "education_type": "Higher education",
+            "housing_type": "House / apartment",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["assessment_mode"] == "application_only_manual_simulation"
+    assert payload["human_decision_required"] is True
+    assert payload["automatic_approval_or_decline"] is False
+
+
+def test_new_application_simulator_rejects_invalid_external_score(client: TestClient) -> None:
+    response = client.post(
+        "/simulate-new-application",
+        headers={"X-API-Key": "test-secret"},
+        json={
+            "annual_income": 600000,
+            "requested_credit": 900000,
+            "annual_annuity": 50000,
+            "goods_price": 850000,
+            "employment_years": 4,
+            "external_source_1": 1.5,
+        },
+    )
+    assert response.status_code == 422
 
 
 def test_unknown_applicant_returns_sanitized_404(client: TestClient) -> None:

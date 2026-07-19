@@ -207,3 +207,67 @@ class EvidenceAssistantRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     question: str = Field(min_length=1, max_length=1000)
+
+
+class NewApplicationRequest(BaseModel):
+    """Business-friendly, application-time-only simulator inputs."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    annual_income: float = Field(gt=0, le=100_000_000)
+    requested_credit: float = Field(gt=0, le=100_000_000)
+    annual_annuity: float = Field(gt=0, le=10_000_000)
+    goods_price: float = Field(gt=0, le=100_000_000)
+    employment_years: float = Field(ge=0, le=60)
+    external_source_1: float | None = Field(default=None, ge=0, le=1)
+    external_source_2: float | None = Field(default=None, ge=0, le=1)
+    external_source_3: float | None = Field(default=None, ge=0, le=1)
+    contract_type: Literal["Cash loans", "Revolving loans"] = "Cash loans"
+    owns_car: bool = False
+    owns_realty: bool = True
+    children: int = Field(default=0, ge=0, le=20)
+    income_type: Literal[
+        "Businessman",
+        "Commercial associate",
+        "Maternity leave",
+        "Pensioner",
+        "State servant",
+        "Student",
+        "Unemployed",
+        "Working",
+    ] = "Working"
+    education_type: Literal[
+        "Academic degree",
+        "Higher education",
+        "Incomplete higher",
+        "Lower secondary",
+        "Secondary / secondary special",
+    ] = "Secondary / secondary special"
+    housing_type: Literal[
+        "Co-op apartment",
+        "House / apartment",
+        "Municipal apartment",
+        "Office apartment",
+        "Rented apartment",
+        "With parents",
+    ] = "House / apartment"
+
+
+class NewApplicationResponse(BaseModel):
+    """Governed manual simulation response, explicitly not a lending decision."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    assessment_mode: Literal["application_only_manual_simulation"]
+    model: str
+    model_version: str
+    calibrated_payment_difficulty_probability: float = Field(ge=0, le=1)
+    review_threshold: float = Field(gt=0, lt=1)
+    risk_band: Literal["lower_estimated_risk", "moderate_estimated_risk", "elevated_risk"]
+    review_route: Literal["standard_human_review", "enhanced_manual_review_recommended"]
+    data_completeness: float = Field(ge=0, le=1)
+    data_quality_warnings: list[str]
+    reason_codes: ReasonCodeSet
+    explanation_additivity_error: float = Field(ge=0)
+    human_decision_required: bool = True
+    automatic_approval_or_decline: bool = False
