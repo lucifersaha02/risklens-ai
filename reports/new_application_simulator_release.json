@@ -50,5 +50,5 @@
     "Application-only assessment does not use bureau or repayment-history tables.",
     "Output supports human review and is not an approval or decline decision."
   ],
-  "artifact_sha256": "157dc1a56962046457c73db202d5b2a2aaea496f92cf061bdbd989a1b419f84a"
+  "artifact_sha256": "01b0bff0da7102eb5a6e108eb3044a82d3704c35a552ceaa813e49ea3d895a0e"
 }

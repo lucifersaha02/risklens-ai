@@ -91,6 +91,32 @@ class FakeNewApplicationScorer:
             review_route="standard_human_review",
             data_completeness=1.0,
             data_quality_warnings=[],
+            derived_metrics=[
+                {
+                    "metric": "CREDIT_INCOME_RATIO",
+                    "label": "Credit-to-income ratio",
+                    "value": 1.5,
+                    "display_format": "ratio",
+                }
+            ],
+            input_range_checks=[
+                {
+                    "field": "AMT_INCOME_TOTAL",
+                    "label": "Annual income",
+                    "entered_value": 600000,
+                    "observed_min": 25650,
+                    "typical_p01": 45000,
+                    "typical_p99": 472500,
+                    "observed_max": 117000000,
+                    "status": "uncommon_but_observed",
+                    "interpretation": "Outside typical interval, but observed in training.",
+                }
+            ],
+            assessment_coverage={
+                "available_information": ["Current application"],
+                "unavailable_full_history_information": ["Bureau history"],
+                "comparison": "Application-only and full-history assessments differ.",
+            },
             reason_codes={"risk_increasing": [], "risk_reducing": []},
             explanation_additivity_error=0.0,
             human_decision_required=True,

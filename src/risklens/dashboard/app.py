@@ -78,6 +78,24 @@ def reason_chart(prediction: object) -> go.Figure:
     return figure
 
 
+def format_derived_value(value: float, display_format: str) -> str:
+    """Format a backend-derived metric without changing its meaning."""
+    if display_format == "percentage":
+        return f"{value:.2%}"
+    if display_format == "ratio":
+        return f"{value:.2f}×"
+    if display_format == "years":
+        return f"{value:.1f} years"
+    return f"{value:.3f}"
+
+
+def format_reference_value(value: float) -> str:
+    """Format mixed-scale training references compactly."""
+    if abs(value) >= 1000:
+        return f"{value:,.2f}"
+    return f"{value:.3f}"
+
+
 def render_applicant(client: RiskLensAPIClient) -> None:
     """Render applicant lookup, risk, workflow, and explanations."""
     st.subheader("Existing applicant — full-history assessment")
@@ -257,6 +275,66 @@ def render_new_application(client: RiskLensAPIClient) -> None:
             st.success("Standard human review workflow")
         if result.data_quality_warnings:
             st.warning("\n".join(f"• {warning}" for warning in result.data_quality_warnings))
+
+        st.markdown("### How the entered values became model features")
+        derived_columns = st.columns(len(result.derived_metrics))
+        for column, metric in zip(derived_columns, result.derived_metrics, strict=True):
+            column.metric(
+                metric.label,
+                format_derived_value(metric.value, metric.display_format),
+                help=f"Technical derived feature: {metric.metric}",
+            )
+        st.caption(
+            "These are deterministic transformations of the entered application values. "
+            "The annuity-to-income ratio follows Home Credit dataset field definitions and "
+            "must not be interpreted as a verified monthly affordability ratio."
+        )
+
+        st.markdown("### Simulator-training applicability checks")
+        status_labels = {
+            "within_typical_range": "Within typical range",
+            "uncommon_but_observed": "Uncommon but observed",
+            "outside_observed_training_values": "Outside observed training values",
+            "missing_will_be_imputed": "Missing — imputed",
+        }
+        range_rows = []
+        for check in result.input_range_checks:
+            range_rows.append(
+                {
+                    "Input": check.label,
+                    "Entered value": (
+                        "Missing"
+                        if check.entered_value is None
+                        else format_reference_value(check.entered_value)
+                    ),
+                    "Typical training interval (P01–P99)": (
+                        f"{format_reference_value(check.typical_p01)} – "
+                        f"{format_reference_value(check.typical_p99)}"
+                    ),
+                    "Observed training min–max": (
+                        f"{format_reference_value(check.observed_min)} – "
+                        f"{format_reference_value(check.observed_max)}"
+                    ),
+                    "Status": status_labels[check.status],
+                }
+            )
+        st.dataframe(pd.DataFrame(range_rows), hide_index=True, width="stretch")
+        st.caption(
+            "Typical means the central 98% of the simulator-training partition; it is not an "
+            "allowed range. Observed min–max includes rare values and possible outliers."
+        )
+
+        st.markdown("### Information coverage")
+        available, unavailable = st.columns(2)
+        with available:
+            st.markdown("**Available to this application-only model**")
+            for item in result.assessment_coverage.available_information:
+                st.markdown(f"- {item}")
+        with unavailable:
+            st.markdown("**Available only in the full-history workflow**")
+            for item in result.assessment_coverage.unavailable_full_history_information:
+                st.markdown(f"- {item}")
+        st.info(result.assessment_coverage.comparison)
         st.plotly_chart(reason_chart(result), width="stretch")
         st.info(
             "This is an application-only research estimate. It excludes sensitive decision "

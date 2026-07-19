@@ -76,15 +76,87 @@ class NewApplicationScorer:
         self.model_version = digest[:12]
         self._explainer: Any | None = None
 
-    def _quality_warnings(self, frame: pd.DataFrame) -> list[str]:
+    @staticmethod
+    def _range_check(
+        field: str,
+        label: str,
+        value: float | None,
+        limits: dict[str, float],
+    ) -> dict[str, Any]:
+        if value is None or pd.isna(value):
+            status = "missing_will_be_imputed"
+            interpretation = "Missing; the pipeline will use training-learned imputation."
+            entered_value = None
+        elif limits["p01"] <= float(value) <= limits["p99"]:
+            status = "within_typical_range"
+            interpretation = "Within the central 98% of simulator-training values."
+            entered_value = float(value)
+        elif limits["observed_min"] <= float(value) <= limits["observed_max"]:
+            status = "uncommon_but_observed"
+            interpretation = "Outside the typical interval, but observed in simulator training."
+            entered_value = float(value)
+        else:
+            status = "outside_observed_training_values"
+            interpretation = (
+                "Outside values observed in simulator training; applicability is limited."
+            )
+            entered_value = float(value)
+        return {
+            "field": field,
+            "label": label,
+            "entered_value": entered_value,
+            "observed_min": limits["observed_min"],
+            "typical_p01": limits["p01"],
+            "typical_p99": limits["p99"],
+            "observed_max": limits["observed_max"],
+            "status": status,
+            "interpretation": interpretation,
+        }
+
+    def _range_checks(self, frame: pd.DataFrame) -> list[dict[str, Any]]:
+        reference = self.artifact.reference
+        engineered = self.artifact.model.base_model.named_steps["features"].transform(frame)
+        raw_fields = {
+            "AMT_INCOME_TOTAL": "Annual income",
+            "AMT_CREDIT": "Requested credit",
+            "AMT_ANNUITY": "Loan annuity amount",
+            "AMT_GOODS_PRICE": "Goods price",
+            "CNT_CHILDREN": "Number of children",
+            "EXT_SOURCE_1": "External credit signal 1",
+            "EXT_SOURCE_2": "External credit signal 2",
+            "EXT_SOURCE_3": "External credit signal 3",
+        }
+        checks = [
+            self._range_check(
+                field,
+                label,
+                frame.iloc[0][field],
+                reference["numeric_ranges"][field],
+            )
+            for field, label in raw_fields.items()
+        ]
+        checks.append(
+            self._range_check(
+                "EMPLOYMENT_YEARS",
+                "Employment history (years)",
+                float(engineered.iloc[0]["EMPLOYMENT_YEARS"]),
+                reference["derived_ranges"]["EMPLOYMENT_YEARS"],
+            )
+        )
+        return checks
+
+    def _quality_warnings(self, frame: pd.DataFrame, checks: list[dict[str, Any]]) -> list[str]:
         warnings = []
         reference = self.artifact.reference
-        for column, limits in reference["numeric_ranges"].items():
-            value = frame.iloc[0][column]
-            if pd.isna(value):
-                warnings.append(f"{column} is missing and will be imputed from training data")
-            elif float(value) < limits["p01"] or float(value) > limits["p99"]:
-                warnings.append(f"{column} is outside the central 98% of training values")
+        for check in checks:
+            if check["status"] == "uncommon_but_observed":
+                warnings.append(f"{check['label']} is uncommon but observed in simulator training")
+            elif check["status"] == "outside_observed_training_values":
+                warnings.append(
+                    f"{check['label']} is outside values observed in simulator training"
+                )
+            elif check["status"] == "missing_will_be_imputed":
+                warnings.append(f"{check['label']} is missing and will be imputed")
         for column, levels in reference["categorical_levels"].items():
             if str(frame.iloc[0][column]) not in levels:
                 raise ValueError(f"{column} contains a category not observed during training")
@@ -99,7 +171,8 @@ class NewApplicationScorer:
         frame = application_request_to_frame(request)
         if list(frame.columns) != self.artifact.input_columns:
             raise RuntimeError("New-application input contract does not match the frozen artifact")
-        warnings = self._quality_warnings(frame)
+        checks = self._range_checks(frame)
+        warnings = self._quality_warnings(frame, checks)
         model = self.artifact.model
         pipeline = model.base_model
         probability = float(model.predict_proba(frame)[0, 1])
@@ -125,6 +198,38 @@ class NewApplicationScorer:
             )
         )
         completeness = (12 + external_count) / 15
+        derived_metrics = [
+            {
+                "metric": "CREDIT_INCOME_RATIO",
+                "label": "Credit-to-income ratio",
+                "value": float(engineered.iloc[0]["CREDIT_INCOME_RATIO"]),
+                "display_format": "ratio",
+            },
+            {
+                "metric": "ANNUITY_INCOME_RATIO",
+                "label": "Annuity-to-income ratio (dataset-scale)",
+                "value": float(engineered.iloc[0]["ANNUITY_INCOME_RATIO"]),
+                "display_format": "percentage",
+            },
+            {
+                "metric": "GOODS_CREDIT_RATIO",
+                "label": "Goods-price-to-credit ratio",
+                "value": float(engineered.iloc[0]["GOODS_CREDIT_RATIO"]),
+                "display_format": "ratio",
+            },
+            {
+                "metric": "EXT_SOURCE_MEAN",
+                "label": "Average external credit signal",
+                "value": float(engineered.iloc[0]["EXT_SOURCE_MEAN"]),
+                "display_format": "number",
+            },
+            {
+                "metric": "EMPLOYMENT_YEARS",
+                "label": "Employment history",
+                "value": float(engineered.iloc[0]["EMPLOYMENT_YEARS"]),
+                "display_format": "years",
+            },
+        ]
         return NewApplicationResponse(
             assessment_mode="application_only_manual_simulation",
             model=self.artifact.release_name,
@@ -135,6 +240,28 @@ class NewApplicationScorer:
             review_route=policy_action(probability, threshold),
             data_completeness=completeness,
             data_quality_warnings=warnings,
+            derived_metrics=derived_metrics,
+            input_range_checks=checks,
+            assessment_coverage={
+                "available_information": [
+                    "Current application amounts and categories",
+                    "Employment duration",
+                    "Up to three anonymized external credit signals",
+                    "Application-time derived ratios",
+                ],
+                "unavailable_full_history_information": [
+                    "Detailed bureau credit records",
+                    "Previous Home Credit applications",
+                    "Instalment-payment history",
+                    "Credit-card balance history",
+                    "POS/cash-loan history",
+                ],
+                "comparison": (
+                    "Application-only simulation uses fewer information sources than the "
+                    "existing-applicant full-history assessment. Their probabilities are not "
+                    "interchangeable."
+                ),
+            },
             reason_codes=reason_codes(
                 preprocessor.get_feature_names_out(),
                 values,

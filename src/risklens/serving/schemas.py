@@ -272,6 +272,48 @@ class NewApplicationRequest(BaseModel):
     ] = "House / apartment"
 
 
+class ApplicationDerivedMetric(BaseModel):
+    """One transparent value derived from manual application inputs."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    metric: str
+    label: str
+    value: float
+    display_format: Literal["number", "ratio", "percentage", "years"]
+
+
+class ApplicationRangeCheck(BaseModel):
+    """Applicability check against the simulator's exact training partition."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    field: str
+    label: str
+    entered_value: float | None
+    observed_min: float
+    typical_p01: float
+    typical_p99: float
+    observed_max: float
+    status: Literal[
+        "within_typical_range",
+        "uncommon_but_observed",
+        "outside_observed_training_values",
+        "missing_will_be_imputed",
+    ]
+    interpretation: str
+
+
+class AssessmentCoverage(BaseModel):
+    """Explicit distinction between application-only and full-history information."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    available_information: list[str]
+    unavailable_full_history_information: list[str]
+    comparison: str
+
+
 class NewApplicationResponse(BaseModel):
     """Governed manual simulation response, explicitly not a lending decision."""
 
@@ -286,6 +328,9 @@ class NewApplicationResponse(BaseModel):
     review_route: Literal["standard_human_review", "enhanced_manual_review_recommended"]
     data_completeness: float = Field(ge=0, le=1)
     data_quality_warnings: list[str]
+    derived_metrics: list[ApplicationDerivedMetric]
+    input_range_checks: list[ApplicationRangeCheck]
+    assessment_coverage: AssessmentCoverage
     reason_codes: ReasonCodeSet
     explanation_additivity_error: float = Field(ge=0)
     human_decision_required: bool = True

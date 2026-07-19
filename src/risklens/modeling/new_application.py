@@ -155,14 +155,27 @@ def _internal_splits(
 def _training_reference(frame: pd.DataFrame, config: dict[str, Any]) -> dict[str, Any]:
     numeric = config["input_features"]["numeric"]
     categorical = config["input_features"]["categorical"]
+    engineered = add_simulator_features(frame)
+    derived_columns = [
+        "EMPLOYMENT_YEARS",
+        "CREDIT_INCOME_RATIO",
+        "ANNUITY_INCOME_RATIO",
+        "GOODS_CREDIT_RATIO",
+        "EXT_SOURCE_MEAN",
+    ]
+
+    def distribution(series: pd.Series) -> dict[str, float]:
+        values = pd.to_numeric(series, errors="coerce").dropna()
+        return {
+            "observed_min": float(values.min()),
+            "p01": float(values.quantile(0.01)),
+            "p99": float(values.quantile(0.99)),
+            "observed_max": float(values.max()),
+        }
+
     return {
-        "numeric_ranges": {
-            column: {
-                "p01": float(frame[column].quantile(0.01)),
-                "p99": float(frame[column].quantile(0.99)),
-            }
-            for column in numeric
-        },
+        "numeric_ranges": {column: distribution(frame[column]) for column in numeric},
+        "derived_ranges": {column: distribution(engineered[column]) for column in derived_columns},
         "categorical_levels": {
             column: sorted(frame[column].dropna().astype(str).unique().tolist())
             for column in categorical
