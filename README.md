@@ -56,3 +56,44 @@ The project uses the Home Credit Default Risk competition dataset from Kaggle:
 https://www.kaggle.com/competitions/home-credit-default-risk/data
 
 Raw competition data is not included in this repository. Users must download it directly from Kaggle and accept the applicable competition rules.
+
+## Docker Compose deployment
+
+The containers package code and Python dependencies, while governed data, model, and report
+artifacts remain outside the image and are mounted read-only into the API container. This keeps
+Kaggle data, trained artifacts, and secrets out of image layers.
+
+Prerequisites:
+
+1. Install Docker Desktop with the WSL 2 backend and confirm `docker compose version` works.
+2. Complete the local data/model build workflow so `data/`, `models/`, and `reports/` contain
+   the artifacts required by the API.
+3. Copy `.env.example` to `.env` and replace the placeholder with a long random local secret.
+
+Start both services:
+
+```powershell
+Copy-Item .env.example .env
+# Edit .env before continuing.
+docker compose config
+docker compose build
+docker compose up -d
+docker compose ps
+```
+
+Open:
+
+- Dashboard: <http://127.0.0.1:8501>
+- Authenticated API documentation: <http://127.0.0.1:8000/docs>
+- API health: <http://127.0.0.1:8000/health>
+
+Stop the deployment with:
+
+```powershell
+docker compose down
+```
+
+The Compose deployment uses non-root processes, read-only container filesystems, dropped Linux
+capabilities, health checks, localhost-only published ports, and a private service hostname for
+dashboard-to-API traffic. It is a local reproducibility deployment, not a claim of production
+bank security or regulatory approval.

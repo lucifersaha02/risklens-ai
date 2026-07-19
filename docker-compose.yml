@@ -1,0 +1,74 @@
+name: risklens-ai
+
+x-runtime-security: &runtime-security
+  init: true
+  restart: unless-stopped
+  read_only: true
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  tmpfs:
+    - /tmp:rw,nosuid,size=256m
+
+services:
+  api:
+    <<: *runtime-security
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: risklens-ai:local
+    command: ["risklens", "serve-api", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      RISKLENS_API_KEY: ${RISKLENS_API_KEY:?Set RISKLENS_API_KEY before starting Compose}
+      RISKLENS_PROJECT_ROOT: /app
+    volumes:
+      - ./data:/app/data:ro
+      - ./models:/app/models:ro
+      - ./reports:/app/reports:ro
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5).read()",
+        ]
+      interval: 15s
+      timeout: 8s
+      retries: 5
+      start_period: 45s
+
+  dashboard:
+    <<: *runtime-security
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: risklens-ai:local
+    command: ["risklens", "serve-dashboard", "--host", "0.0.0.0", "--port", "8501"]
+    environment:
+      RISKLENS_API_KEY: ${RISKLENS_API_KEY:?Set RISKLENS_API_KEY before starting Compose}
+      RISKLENS_API_URL: http://api:8000
+      RISKLENS_PROJECT_ROOT: /app
+      STREAMLIT_BROWSER_GATHER_USAGE_STATS: "false"
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8501:8501"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=5).read()",
+        ]
+      interval: 15s
+      timeout: 8s
+      retries: 5
+      start_period: 30s

@@ -1,8 +1,11 @@
 """Central filesystem configuration for RiskLens AI."""
 
+import os
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(
+    os.getenv("RISKLENS_PROJECT_ROOT", str(Path(__file__).resolve().parents[2]))
+).resolve()
 
 CONFIG_DIR = PROJECT_ROOT / "configs"
 
