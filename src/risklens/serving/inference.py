@@ -61,6 +61,7 @@ def load_applicant_feature_row(
     if applicant_id <= 0:
         raise ValueError("Applicant ID must be positive")
     matches: list[pd.DataFrame] = []
+    matched_source = ""
     for filename in ("application_train.csv", "application_test.csv"):
         path = raw_data_dir / filename
         if not path.exists():
@@ -69,12 +70,14 @@ def load_applicant_feature_row(
             selected = chunk.loc[chunk["SK_ID_CURR"] == applicant_id]
             if not selected.empty:
                 matches.append(selected)
+                matched_source = filename
                 break
     if not matches:
         raise ApplicantNotFoundError(f"Applicant {applicant_id} was not found")
     application = pd.concat(matches, ignore_index=True)
     if len(application) != 1:
         raise ValueError(f"Applicant {applicant_id} appears more than once")
+    source_columns = application.columns.tolist()
     application = application.drop(columns="TARGET", errors="ignore")
 
     history_path = interim_dir / history_filename
@@ -89,6 +92,8 @@ def load_applicant_feature_row(
     if len(history) != 1:
         raise ValueError(f"Exactly one history row is required for applicant {applicant_id}")
     combined = application.merge(history, on="SK_ID_CURR", how="inner", validate="one_to_one")
+    combined.attrs["source_columns"] = source_columns
+    combined.attrs["source_filename"] = matched_source
     if len(combined) != 1 or "TARGET" in combined.columns:
         raise ValueError("Serving feature assembly failed its leakage or cardinality check")
     return combined
@@ -155,6 +160,16 @@ class FrozenRiskScorer:
         if reason_count <= 0 or reason_count > 20:
             raise ValueError("reason_count must be between 1 and 20")
         applicant_id = int(frame.iloc[0]["SK_ID_CURR"])
+        row = frame.iloc[0]
+        employed_days = row.get("DAYS_EMPLOYED")
+        employment_years = None
+        if pd.notna(employed_days) and float(employed_days) != 365243:
+            employment_years = max(-float(employed_days) / 365.25, 0.0)
+        source = (
+            "Home Credit application_train"
+            if "TARGET" in frame.attrs.get("source_columns", [])
+            else "Home Credit application_test"
+        )
         raw_probability = float(self.pipeline.predict_proba(frame)[0, 1])
         calibrated_probability = float(self.model.predict_proba(frame)[0, 1])
 
@@ -177,6 +192,26 @@ class FrozenRiskScorer:
 
         return PredictionResponse(
             applicant_id=applicant_id,
+            assessment_mode="existing_applicant_full_history",
+            application_summary={
+                "applicant_id": applicant_id,
+                "data_source": source,
+                "contract_type": str(row["NAME_CONTRACT_TYPE"]),
+                "annual_income": float(row["AMT_INCOME_TOTAL"]),
+                "requested_credit": float(row["AMT_CREDIT"]),
+                "loan_annuity_amount": float(row["AMT_ANNUITY"]),
+                "goods_price": (
+                    None if pd.isna(row.get("AMT_GOODS_PRICE")) else float(row["AMT_GOODS_PRICE"])
+                ),
+                "employment_years": employment_years,
+                "external_signals_available": int(
+                    sum(
+                        pd.notna(row.get(name))
+                        for name in ("EXT_SOURCE_1", "EXT_SOURCE_2", "EXT_SOURCE_3")
+                    )
+                ),
+                "full_history_features_available": True,
+            },
             model=str(self.freeze["model"]),
             model_version=self.model_version,
             calibration_method=str(self.freeze["calibration_method"]),

@@ -27,12 +27,31 @@ class ReasonCodeSet(BaseModel):
     risk_reducing: list[ReasonCode]
 
 
+class ExistingApplicationSummary(BaseModel):
+    """Human-readable context for the stored loan application being assessed."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    applicant_id: int = Field(gt=0)
+    data_source: Literal["Home Credit application_train", "Home Credit application_test"]
+    contract_type: str
+    annual_income: float = Field(gt=0)
+    requested_credit: float = Field(gt=0)
+    loan_annuity_amount: float = Field(gt=0)
+    goods_price: float | None = Field(default=None, gt=0)
+    employment_years: float | None = Field(default=None, ge=0)
+    external_signals_available: int = Field(ge=0, le=3)
+    full_history_features_available: bool
+
+
 class PredictionResponse(BaseModel):
     """Governed prediction response containing no observed outcome."""
 
     model_config = ConfigDict(extra="forbid")
 
     applicant_id: int = Field(gt=0)
+    assessment_mode: Literal["existing_applicant_full_history"]
+    application_summary: ExistingApplicationSummary
     model: str
     model_version: str
     calibration_method: str

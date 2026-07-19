@@ -25,7 +25,7 @@ def risk_gauge(probability: float, threshold: float) -> go.Figure:
             mode="gauge+number",
             value=probability * 100,
             number={"suffix": "%", "valueformat": ".2f"},
-            title={"text": "Calibrated default probability"},
+            title={"text": "Estimated payment-difficulty risk for this application"},
             gauge={
                 "axis": {"range": [0, 100]},
                 "bar": {"color": "#355C7D"},
@@ -73,17 +73,51 @@ def reason_chart(prediction: object) -> go.Figure:
 
 def render_applicant(client: RiskLensAPIClient) -> None:
     """Render applicant lookup, risk, workflow, and explanations."""
-    st.subheader("Applicant decision support")
+    st.subheader("Existing applicant — full-history assessment")
     st.caption("Research prototype. A qualified human must make and document every decision.")
     left, right = st.columns([2, 1])
     applicant_id = left.number_input("Applicant ID", min_value=1, value=100001, step=1)
-    reason_count = right.slider("Reasons per direction", 1, 10, 5)
+    reason_count = right.slider(
+        "Number of explanation factors",
+        1,
+        10,
+        5,
+        help="Shows this many risk-increasing and this many risk-reducing factors.",
+    )
     if st.button("Score applicant", type="primary", width="stretch"):
         try:
             prediction = client.predict(int(applicant_id), reason_count)
         except RiskLensAPIError as error:
             st.error(str(error))
             return
+        summary = prediction.application_summary
+        st.markdown("**Stored Home Credit application being assessed**")
+        summary_columns = st.columns(4)
+        summary_columns[0].metric("Product", summary.contract_type)
+        summary_columns[1].metric("Requested credit", f"{summary.requested_credit:,.2f}")
+        summary_columns[2].metric("Annual income", f"{summary.annual_income:,.2f}")
+        summary_columns[3].metric("Loan annuity amount", f"{summary.loan_annuity_amount:,.2f}")
+        detail_columns = st.columns(4)
+        detail_columns[0].metric(
+            "Goods price",
+            "Unavailable" if summary.goods_price is None else f"{summary.goods_price:,.2f}",
+        )
+        detail_columns[1].metric(
+            "Employment history",
+            (
+                "Unavailable"
+                if summary.employment_years is None
+                else f"{summary.employment_years:.1f} years"
+            ),
+        )
+        detail_columns[2].metric(
+            "External signals", f"{summary.external_signals_available} of 3 available"
+        )
+        detail_columns[3].metric("Assessment mode", "Full history")
+        st.caption(
+            f"Source: {summary.data_source}. The risk estimate applies to this stored "
+            "application and requested credit—not to the applicant for every possible loan."
+        )
         gauge_column, action_column = st.columns([2, 1])
         with gauge_column:
             st.plotly_chart(

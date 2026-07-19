@@ -48,6 +48,19 @@ class FakeScorer:
             raise ApplicantNotFoundError("Applicant 999 was not found")
         return PredictionResponse(
             applicant_id=applicant_id,
+            assessment_mode="existing_applicant_full_history",
+            application_summary={
+                "applicant_id": applicant_id,
+                "data_source": "Home Credit application_test",
+                "contract_type": "Cash loans",
+                "annual_income": 135000,
+                "requested_credit": 568800,
+                "loan_annuity_amount": 20560.5,
+                "goods_price": 450000,
+                "employment_years": 6.38,
+                "external_signals_available": 3,
+                "full_history_features_available": True,
+            },
             model="full_history_xgboost_calibrated",
             model_version="abc123",
             calibration_method="sigmoid",
