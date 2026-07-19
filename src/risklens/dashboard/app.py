@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from risklens.dashboard.client import RiskLensAPIClient, RiskLensAPIError
+from risklens.dashboard.feature_labels import display_feature_name
 from risklens.serving.schemas import NewApplicationRequest
 
 st.set_page_config(
@@ -52,21 +53,27 @@ def reason_chart(prediction: object) -> go.Figure:
     ]
     frame = pd.DataFrame([record.model_dump() for record in records])
     frame = frame.sort_values("shap_value")
+    frame["display_feature"] = frame["feature"].map(display_feature_name)
     colors = ["#2E8B57" if value < 0 else "#B02A37" for value in frame["shap_value"]]
     figure = go.Figure(
         go.Bar(
             x=frame["shap_value"],
-            y=frame["feature"],
+            y=frame["display_feature"],
             orientation="h",
             marker_color=colors,
-            hovertemplate="%{y}<br>SHAP: %{x:.4f}<extra></extra>",
+            customdata=frame[["feature", "transformed_value"]],
+            hovertemplate=(
+                "%{y}<br>Technical feature: %{customdata[0]}"
+                "<br>Transformed value: %{customdata[1]:.4f}"
+                "<br>SHAP contribution: %{x:.4f}<extra></extra>"
+            ),
         )
     )
     figure.update_layout(
-        title="Applicant-level raw-margin drivers",
-        xaxis_title="SHAP value",
-        height=420,
-        margin={"l": 20, "r": 20, "t": 60, "b": 20},
+        title="Factors influencing this risk estimate",
+        xaxis_title="SHAP contribution (raw model scale)",
+        height=max(420, 42 * len(frame) + 100),
+        margin={"l": 40, "r": 20, "t": 60, "b": 20},
     )
     return figure
 
