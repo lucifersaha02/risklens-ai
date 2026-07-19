@@ -7,7 +7,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## [Explore the public RiskLens AI documentation →](https://risklens-ai-docs.codymay2025.chatgpt.site)
+## [Explore the public RiskLens AI documentation →](https://lucifersaha02.github.io/risklens-ai/)
 
 Review the model evidence, assessment workflows, architecture, responsible-AI controls,
 limitations, and production-minded engineering behind the platform.
