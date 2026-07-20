@@ -68,7 +68,7 @@ export default function Home() {
         <div className="evidence-panel">
           <div className="panel-heading"><p className="kicker">Frozen portfolio evidence</p><span className="status">● model locked</span></div>
           <div className="table-wrap"><table><thead><tr><th>Dimension</th><th>Measure</th><th>Result</th><th>Evidence</th></tr></thead><tbody>
-            {evidence.map(row => <tr key={row[0]}>{row.map(cell => <td key={cell}>{cell}</td>)}</tr>)}
+            {evidence.map(row => <tr key={row[0]}>{row.map((cell, index) => <td key={cell} data-label={["Dimension", "Measure", "Result", "Evidence"][index]}>{cell}</td>)}</tr>)}
           </tbody></table></div>
           <p className="table-foot">Evaluated once on 30,752 untouched applicants. Post-holdout tuning is prohibited.</p>
         </div>
